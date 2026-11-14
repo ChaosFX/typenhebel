@@ -1,0 +1,9 @@
+dist/
+prototype/
+samples/
+playwright-report/
+test-results/
+e2e/**/*.png
+package-lock.json
+SPEC.md
+design/
