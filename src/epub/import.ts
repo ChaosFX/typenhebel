@@ -1,6 +1,6 @@
 // EPUB lesen: container.xml → OPF → Spine → XHTML-Kapitel in Lesereihenfolge (SPEC §7, Phase 1).
 import { strFromU8, unzipSync } from 'fflate';
-import type { RawChapter } from '../core/book';
+import { assembleChapters, type Book, type BookSource, type RawChapter } from '../core/book';
 import { extractChapter } from './xhtml';
 
 export interface EpubBook {
@@ -110,5 +110,34 @@ export function readEpub(data: Uint8Array, parser: DOMParser = new DOMParser()):
     date: dc('date'),
     language: dc('language'),
     chapters,
+  };
+}
+
+/** Ausgabe als Text, z. B. „Reclam Verlag 1971“. */
+export const epubEdition = (eb: EpubBook): string | undefined =>
+  [eb.publisher, eb.date?.slice(0, 4)].filter(Boolean).join(' ') || undefined;
+
+/**
+ * EPUB in ein Buch umwandeln – gemeinsam für den Import im Browser und das Korpus-Skript,
+ * damit beide exakt denselben Text liefern. Gibt null zurück, wenn kein Text gefunden wurde.
+ */
+export function epubToBook(
+  eb: EpubBook,
+  opts: { id: string; source: BookSource; replace: boolean; title?: string; author?: string; skip?: string[] },
+): Book | null {
+  const skip = new Set(opts.skip ?? []);
+  const { chapters, sections } = assembleChapters(
+    eb.chapters.filter((c) => !skip.has(c.title.trim())),
+    { replace: opts.replace },
+  );
+  if (!sections.length) return null;
+  return {
+    id: opts.id,
+    title: opts.title || eb.title,
+    author: opts.author ?? eb.author,
+    source: opts.source,
+    chapters,
+    sections,
+    created: Date.now(),
   };
 }
