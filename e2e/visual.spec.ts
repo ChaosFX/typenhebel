@@ -1,4 +1,6 @@
-// Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss ~0 sein.
+// Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
+// Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
+const ADDITIONS = ['.brand'];
 import { expect, test, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -13,6 +15,7 @@ async function shot(page: Page, url: string, theme: string): Promise<PNG> {
   await page.goto(url);
   await page.locator('#text .c').first().waitFor();
   await page.locator('#inp').focus();
+  if (!url.startsWith('file:')) await page.addStyleTag({ content: ADDITIONS.join(',') + '{display:none!important}' });
   await page.evaluate(() => document.fonts.ready);
   return PNG.sync.read(await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' }));
 }

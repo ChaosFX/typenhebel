@@ -61,3 +61,13 @@ test('Neuladen behält den Fortschritt', async ({ page }) => {
   await page.reload();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
 });
+
+test('Logo und Favicons sind eingebunden', async ({ page, request }) => {
+  await expect(page.locator('.brand-name')).toHaveText('Typenhebel');
+  await expect(page.locator('.brand .mark')).toBeVisible();
+  const icons = await page
+    .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .evaluateAll((ls) => ls.map((l) => (l as HTMLLinkElement).href));
+  expect(icons).toHaveLength(3);
+  for (const href of icons) expect((await request.get(href)).status()).toBe(200);
+});
