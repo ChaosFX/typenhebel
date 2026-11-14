@@ -151,6 +151,22 @@ describe('Export und Import', () => {
     await other.delete();
   });
 
+  test('Cover-Wahl wandert mit und verschwindet beim Löschen des Buchs', async () => {
+    await saveBook(db, book('b1'));
+    await db.kv.put({
+      key: 'covers',
+      value: { b1: { layout: 'tasten', palette: 'Rost' }, demo: { layout: 'rahmen', palette: 'Moos' } },
+    });
+    const json = JSON.stringify(await buildExport(db, true));
+    const other = new TypenhebelDb('test-covers-' + n++);
+    await other.open();
+    await importJson(other, json);
+    expect((await loadState(other)).covers.b1).toEqual({ layout: 'tasten', palette: 'Rost' });
+    await deleteBook(other, 'b1');
+    expect((await loadState(other)).covers).toEqual({ demo: { layout: 'rahmen', palette: 'Moos' } });
+    await other.delete();
+  });
+
   test('ungültige Datei ändert nichts', async () => {
     await addSession(db, session('s1', 5), { ...emptyProfile(), n: 3 });
     await expect(importJson(db, '{"app":"typenhebel","schema":99}')).rejects.toThrow(/neueren Version/);

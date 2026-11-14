@@ -1,6 +1,15 @@
 // Gespeicherte Datensätze, Exportformat und Zusammenführen beim Import.
 // DOM- und IndexedDB-frei, damit alles in Unit-Tests prüfbar ist.
-import { addProfiles, emptyProfile, mergeProfile, type Book, type LogEvent, type Profile } from '../core';
+import {
+  addProfiles,
+  emptyProfile,
+  isCoverChoice,
+  mergeProfile,
+  type Book,
+  type CoverChoice,
+  type LogEvent,
+  type Profile,
+} from '../core';
 import type { SessionStats } from '../core/session';
 
 /** Rohdaten (Tastenereignisse) bleiben nur für die letzten N Sessions erhalten (SPEC §7, Phase 2). */
@@ -88,6 +97,16 @@ export interface ExportFile {
   sessions: SessionRecord[];
   progress: ProgressRecord[];
   books?: Book[];
+  /** Vom Nutzer gewählte Cover je Buch-ID */
+  covers?: Record<string, CoverChoice>;
+}
+
+/** Cover-Wahl prüfen; ungültige Einträge fallen still weg (rein optisch, kein Datenverlust). */
+export function cleanCovers(x: unknown): Record<string, CoverChoice> {
+  const out: Record<string, CoverChoice> = {};
+  if (isObj(x))
+    for (const [k, v] of Object.entries(x)) if (isCoverChoice(v)) out[k] = { layout: v.layout, palette: v.palette };
+  return out;
 }
 
 export class ImportError extends Error {}
@@ -182,6 +201,7 @@ export function parseExport(json: string): ExportFile {
     sessions: d.sessions.map(checkSession),
     progress: d.progress.map(checkProgress),
     books: d.books?.map(checkBook),
+    covers: d.covers === undefined ? undefined : cleanCovers(d.covers),
   };
 }
 
@@ -192,6 +212,7 @@ export interface LocalState {
   sessionIds: Set<string>;
   bookIds: Set<string>;
   progress: ProgressRecord[];
+  covers?: Record<string, CoverChoice>;
 }
 
 export interface MergeResult {
@@ -199,6 +220,8 @@ export interface MergeResult {
   sessions: SessionRecord[];
   books: Book[];
   progress: ProgressRecord[];
+  /** Cover-Wahl nach dem Zusammenführen (lokale Wahl hat Vorrang) */
+  covers: Record<string, CoverChoice>;
   /** Neue Sessions ohne Rohdaten, die im Profil deshalb nicht auftauchen */
   unprofiled: number;
   duplicates: number;
@@ -211,6 +234,7 @@ export interface MergeResult {
  *   bleibt es. Sind beide disjunkt, werden die Profile addiert. Bei teilweiser Überschneidung fließen nur die
  *   neuen Sessions mit Rohdaten ins lokale Profil ein (sonst würde doppelt gezählt).
  * - Fortschritt: abgeschlossene Abschnitte vereinigen, Leseposition lokal hat Vorrang.
+ * - Cover: lokale Wahl hat Vorrang, importierte nur für bekannte Bücher.
  */
 export function mergeImport(local: LocalState, inc: ExportFile): MergeResult {
   const incIds = new Set(inc.sessions.map((s) => s.id));
@@ -245,5 +269,7 @@ export function mergeImport(local: LocalState, inc: ExportFile): MergeResult {
     if (mine && done.length === mine.done.length) continue;
     progress.push({ bookId: p.bookId, section: mine?.section ?? p.section, done });
   }
-  return { profile, sessions, books, progress, unprofiled, duplicates };
+  const covers = { ...(local.covers ?? {}) };
+  for (const [id, c] of Object.entries(inc.covers ?? {})) if (known.has(id) && !covers[id]) covers[id] = c;
+  return { profile, sessions, books, progress, covers, unprofiled, duplicates };
 }
