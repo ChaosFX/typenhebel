@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
+      // `const { sections: _s, ...meta } = book` zum Weglassen von Feldern
+      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
     },
   },
 );

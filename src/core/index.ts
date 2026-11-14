@@ -9,7 +9,16 @@ export {
   type LogEvent,
   type SessionStats,
 } from './session';
-export { analyze, charClass, emptyProfile, hint, mergeProfile, type Analysis, type Profile } from './analysis';
+export {
+  addProfiles,
+  analyze,
+  charClass,
+  emptyProfile,
+  hint,
+  mergeProfile,
+  type Analysis,
+  type Profile,
+} from './analysis';
 export {
   assembleChapters,
   chapterOf,
