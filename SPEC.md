@@ -157,6 +157,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - **Claude Code muss echte EPUB-Beispiele prüfen**: Dominik legt die Gutenberg-EPUB von *Die Welt von Gestern* unter `samples/` ab (liegt dort bereits, per `.gitignore` nicht im Repo). Parser nicht „blind“ schreiben.
 - Warnung bei seltenen Zeichen, die auf der deutschen Tastatur schwer erreichbar sind; Option, diese zu ersetzen.
 - Akzeptanz: Zweig-EPUB lädt vollständig, 18 Kapitel erkannt, keine Fußnotenreste, Stichprobe von 5 Abschnitten ohne Textfehler.
+- Entschieden (Dominik, 2026-11-14): **Mottos/Epigraphe werden mitgetippt**, auch das Motto der Titelseite. Übrige Titelei (Titel, Verlag, Ausgabe) entfällt.
 
 ### Phase 2: Persistenz
 - Migration von localStorage nach IndexedDB (Dexie), Bücher/Abschnitte getrennt von Sessions und Profil.

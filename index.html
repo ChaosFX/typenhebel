@@ -37,6 +37,7 @@
           <div class="ba" id="bookAuthor"></div>
         </div>
         <nav class="nav" aria-label="Abschnitte">
+          <select id="chapSel" class="chap" aria-label="Kapitel" title="Kapitel wählen" hidden></select>
           <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt">‹</button>
           <span id="secInfo"></span>
           <button id="next" title="Nächster Abschnitt" aria-label="Nächster Abschnitt">›</button>
@@ -87,17 +88,25 @@
       <div class="in">
         <h2>Text laden</h2>
         <p class="small">
-          Öffne auf <b>projekt-gutenberg.org</b> ein Kapitel, markiere den Text, kopiere ihn und füge ihn hier ein –
-          oder lade eine <code>.txt</code>-Datei. Überschriften, Seitenzahlen und Fußnotenmarker werden entfernt, der
+          Lade ein Buch als <code>.epub</code> (z. B. von projekt-gutenberg.org oder Wikisource) oder als
+          <code>.txt</code> – oder füge Text direkt ein. Kapitel werden erkannt, Fußnoten und Seitenzahlen entfernt, der
           Text wird in Abschnitte geteilt. Alles bleibt in deinem Browser.
         </p>
         <label for="ldTitle">Titel</label
         ><input type="text" id="ldTitle" placeholder="z. B. Die Welt von Gestern – Vorwort" />
         <label for="ldAuthor">Autor</label><input type="text" id="ldAuthor" placeholder="z. B. Stefan Zweig" />
-        <label for="ldFile">Datei (.txt)</label><input type="file" id="ldFile" accept=".txt,text/plain" />
+        <label for="ldFile">Datei (.epub oder .txt)</label
+        ><input type="file" id="ldFile" accept=".epub,.txt,application/epub+zip,text/plain" />
+        <div class="small ldinfo" id="ldInfo" hidden></div>
         <label for="ldText">… oder Text einfügen</label
         ><textarea class="paste" id="ldText" spellcheck="false"></textarea>
-        <div class="msg" id="ldMsg"></div>
+        <div class="rare" id="ldRare" hidden>
+          <div class="small" id="ldRareList"></div>
+          <label class="check"
+            ><input type="checkbox" id="ldReplace" checked /> Seltene Zeichen beim Laden ersetzen</label
+          >
+        </div>
+        <div class="msg" id="ldMsg" role="status"></div>
         <h3 style="margin-top: 1.2rem">Meine Texte</h3>
         <ul class="books" id="bookList"></ul>
         <div class="actions">

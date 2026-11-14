@@ -23,3 +23,16 @@ Pro Browser (Chrome, Firefox, Safari/macOS, Edge) mit deutscher Tastatur. Ton an
 | 17  | beide  | Seite neu laden                                                                        | gleicher Abschnitt, Einstellungen erhalten                   |
 
 Abweichungen bitte mit Browser, Betriebssystem und Tastaturlayout notieren.
+
+## EPUB-Import (Phase 1)
+
+| #   | Aktion                                                                      | Erwartung                                                                  |
+| --- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| E1  | „Text laden“ → `die-welt-von-gestern.epub` wählen                           | Hinweis „EPUB erkannt: 18 Kapitel …“, Titel und Autor ausgefüllt           |
+| E2  | Laden                                                                       | Kapitelauswahl oben rechts, erstes Kapitel „Motto“ (Shakespeare)           |
+| E3  | Kapitel „Die Welt der Sicherheit“ wählen                                    | beginnt mit dem Goethe-Motto, danach „Wenn ich versuche …“                 |
+| E4  | Einen Abschnitt fertig tippen, Enter                                        | Kapitel-Eintrag zählt hoch (z. B. „1/48“), nächster Abschnitt              |
+| E5  | Seite neu laden                                                             | gleiches Kapitel, gleicher Abschnitt, Zähler erhalten                      |
+| E6  | `moby-dick-oder-der-weisse-wal.epub` laden                                  | 66 Kapitel; Hinweis auf seltene Zeichen (griechisch) mit Ersatzvorschlägen |
+| E7  | Kapitel „Wortableitung“ → im Text steht „chetos“ statt „χητος“              | Ersatz wirkt                                                               |
+| E8  | Beliebige andere EPUB-Datei (eigene Sammlung) laden und zwei Kapitel prüfen | keine Fußnoten, keine Seitenzahlen, keine Inhaltsverzeichnisse im Text     |

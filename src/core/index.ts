@@ -10,3 +10,14 @@ export {
   type SessionStats,
 } from './session';
 export { analyze, charClass, emptyProfile, hint, mergeProfile, type Analysis, type Profile } from './analysis';
+export {
+  assembleChapters,
+  chapterOf,
+  chapterRange,
+  type Book,
+  type BookSource,
+  type Chapter,
+  type RawChapter,
+} from './book';
+export { findRare, isTypable, replaceRare, replacementFor, type RareChar } from './rare';
+export { cleanParagraph, normalize } from './text';

@@ -23,16 +23,26 @@ const PARAGRAPH_END = /[.!?…:,;"“”«»]$/;
 const COMMON_CHARS = /[^\p{L}\p{N}\s.,;:!?'"„“”‚‘’»«›‹()[\]\-–—/&%§€$@*+=_]/gu;
 const SENTENCE_SPLIT = /(?<=[.!?]["“”»«’']?)\s+(?=[„"»«(A-ZÄÖÜ0-9])/u;
 
-/** Rohtext normalisieren und in Absätze und Überschriften zerlegen. */
-export function prepare(raw: string): Prepared {
-  let s = String(raw).replace(/\r\n?/g, '\n').normalize('NFC');
-  s = s
+/**
+ * Zeichen-Normalisierung (SPEC §2): NFC, Sonder-Leerzeichen, unsichtbare Zeichen, ſ → s, … → ...
+ * Zeilenumbrüche bleiben erhalten.
+ */
+export function normalize(s: string): string {
+  return s
+    .normalize('NFC')
     .replace(SPACES, ' ')
     .replace(INVISIBLE, '')
     .replace(/ſ/g, 's')
     .replace(/…/g, '...')
-    .replace(/\t/g, ' ')
-    .replace(/\[\d{1,3}\]/g, '');
+    .replace(/\t/g, ' ');
+}
+
+/** Absatz aus strukturierter Quelle (z. B. EPUB): normalisieren, Leerraum zusammenfassen. */
+export const cleanParagraph = (s: string): string => normalize(s).replace(/\s+/g, ' ').trim();
+
+/** Rohtext normalisieren und in Absätze und Überschriften zerlegen. */
+export function prepare(raw: string): Prepared {
+  const s = normalize(String(raw).replace(/\r\n?/g, '\n')).replace(/\[\d{1,3}\]/g, '');
   let blocks = s.split(/\n\s*\n/);
   if (blocks.length < 3 && s.split('\n').length > 6) blocks = s.split('\n');
   const paragraphs: string[] = [];

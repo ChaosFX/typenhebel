@@ -1,19 +1,28 @@
 import {
   analyze,
+  assembleChapters,
+  chapterOf,
+  chapterRange,
+  cleanParagraph,
   emptyProfile,
+  findRare,
   mergeProfile,
   prepare,
+  replaceRare,
   segment,
   series,
   Session,
   wc,
+  type Book,
   type Profile,
+  type RareChar,
   type SessionStats,
 } from './core';
 import { Sound } from './audio/sound';
 import { migrateLegacyKeys, store } from './data/store';
+import { EpubError, readEpub, type EpubBook } from './epub/import';
 import { attachInput } from './input/engine';
-import { DEMO, type Book } from './ui/demo';
+import { DEMO } from './ui/demo';
 import { esc, fmtTime, round1 } from './ui/format';
 import { insightsHtml, sparkSvg } from './ui/insights';
 
@@ -56,6 +65,8 @@ let books = store.get<Book[]>('books', []);
 let profile = store.get<Profile | null>('profile', null) ?? emptyProfile();
 let sessions = store.get<SessionEntry[]>('sessions', []);
 const progress = store.get<Record<string, number>>('progress', {});
+/** Abgeschlossene Abschnitte je Buch (Indizes) */
+const done = store.get<Record<string, number[]>>('done', {});
 let book: Book = DEMO;
 let secIdx = 0;
 let sess: Session | null = null;
@@ -131,13 +142,72 @@ function renderSection(): void {
   el.text.appendChild(el.caret);
   $('#bookTitle').textContent = book.title;
   $('#bookAuthor').textContent = book.author || '';
-  $('#secInfo').textContent = `Abschnitt ${secIdx + 1} / ${book.sections.length}`;
+  renderChapterNav();
   el.veil.hidden = true;
   el.hint.textContent = '';
   lastY = -1;
   updateCaret(true);
   updateLive();
   focusInput();
+}
+
+// ---------- Kapitel & Fortschritt ----------
+const hasChapters = (b: Book): boolean => (b.chapters?.length ?? 0) > 1;
+const doneSet = (id: string): Set<number> => new Set(done[id] ?? []);
+
+function markDone(id: string, idx: number): void {
+  const s = doneSet(id);
+  s.add(idx);
+  done[id] = [...s].sort((a, b) => a - b);
+  store.set('done', done);
+}
+
+/** Position im Kapitel bzw. im Buch: [Nummer ab 1, Anzahl] */
+function sectionPos(): [number, number] {
+  if (!hasChapters(book)) return [secIdx + 1, book.sections.length];
+  const [start, end] = chapterRange(book, chapterOf(book, secIdx));
+  return [secIdx - start + 1, end - start];
+}
+
+function renderChapterNav(): void {
+  const sel = $<HTMLSelectElement>('#chapSel');
+  const [k, n] = sectionPos();
+  $('#secInfo').textContent = `Abschnitt ${k} / ${n}`;
+  if (!hasChapters(book)) {
+    sel.hidden = true;
+    sel.innerHTML = '';
+    return;
+  }
+  const ds = doneSet(book.id);
+  sel.innerHTML = book
+    .chapters!.map((ch, i) => {
+      const [start, end] = chapterRange(book, i);
+      let finished = 0;
+      for (let j = start; j < end; j++) if (ds.has(j)) finished++;
+      const mark = finished === end - start ? '✓ ' : '';
+      return `<option value="${i}">${mark}${esc(ch.title)} · ${finished}/${end - start}</option>`;
+    })
+    .join('');
+  sel.value = String(chapterOf(book, secIdx));
+  sel.hidden = false;
+}
+
+$<HTMLSelectElement>('#chapSel').addEventListener('change', (e) => {
+  const k = Number((e.target as HTMLSelectElement).value);
+  const [start, end] = chapterRange(book, k);
+  const ds = doneSet(book.id);
+  let target = start;
+  while (target < end && ds.has(target)) target++;
+  openBook(book.id, target < end ? target : start);
+});
+
+function bookProgress(b: Book): string {
+  const n = doneSet(b.id).size;
+  const parts = [];
+  if (hasChapters(b)) parts.push(`${b.chapters!.length} Kapitel`);
+  parts.push(`${b.sections.length} Abschnitte`);
+  if (n) parts.push(`${Math.floor((n / b.sections.length) * 100)} % geschafft`);
+  return parts.join(' · ');
 }
 
 function paint(i: number): void {
@@ -292,6 +362,8 @@ function finish(): void {
   profile.sessions++;
   store.set('sessions', sessions);
   store.set('profile', profile);
+  markDone(book.id, secIdx);
+  renderChapterNav();
   progress[book.id] = (secIdx + 1) % book.sections.length;
   store.set('progress', progress);
   snd.play('done');
@@ -303,9 +375,11 @@ function showResult(st: SessionStats, { newBest, perfect }: { newBest: boolean; 
   const badges: string[] = [];
   if (perfect) badges.push('Fehlerfrei');
   if (newBest) badges.push('Neuer Bestwert');
+  const [k, n] = sectionPos();
+  const chapter = hasChapters(book) ? ` · ${esc(book.chapters![chapterOf(book, secIdx)]!.title)}` : '';
   el.card.innerHTML = `
     <h2 id="resTitle">Abschnitt geschafft</h2>
-    <div class="sub">${esc(book.title)} · Abschnitt ${secIdx + 1} von ${book.sections.length}</div>
+    <div class="sub">${esc(book.title)}${chapter} · Abschnitt ${k} von ${n}</div>
     ${badges.length ? `<div class="badges">${badges.map((b) => `<span class="badge">${b}</span>`).join('')}</div>` : ''}
     <div class="big">
       <div><b>${Math.round(st.wpm)}</b><span>WPM netto</span></div>
@@ -366,13 +440,68 @@ const ldMsg = $('#ldMsg');
 function renderBookList(): void {
   $('#bookList').innerHTML = allBooks()
     .map(
-      (
-        b,
-      ) => `<li><span>${esc(b.title)}${b.author && b.id !== 'demo' ? ' <small>– ' + esc(b.author) + '</small>' : ''}<br><small>${b.sections.length} Abschnitte</small></span>
+      (b) =>
+        `<li><span>${esc(b.title)}${b.author && b.id !== 'demo' ? ' <small>– ' + esc(b.author) + '</small>' : ''}<br><small>${bookProgress(b)}</small></span>
     <span><button data-open="${esc(b.id)}">Öffnen</button>${b.id === 'demo' ? '' : ` <button data-del="${esc(b.id)}">Löschen</button>`}</span></li>`,
     )
     .join('');
 }
+
+/** Ausgewähltes, aber noch nicht geladenes EPUB */
+let pendingEpub: { book: EpubBook; file: string } | null = null;
+const ldInfo = $('#ldInfo');
+const ldRare = $('#ldRare');
+const ldReplace = $<HTMLInputElement>('#ldReplace');
+let rareFound: RareChar[] = [];
+
+function showRare(texts: Iterable<string>): void {
+  rareFound = findRare(texts);
+  ldRare.hidden = rareFound.length === 0;
+  if (!rareFound.length) return;
+  const shown = rareFound
+    .slice(0, 14)
+    .map(
+      (r) =>
+        `<span class="mono">${esc(r.ch)}</span> ${r.replacement === null ? '<i>(kein Ersatz)</i>' : '→ <span class="mono">' + esc(r.replacement) + '</span>'} (${r.n}×)`,
+    );
+  const more = rareFound.length > 14 ? ` und ${rareFound.length - 14} weitere` : '';
+  const stuck = rareFound.some((r) => r.replacement === null)
+    ? ' Zeichen ohne Ersatz lassen sich auf einer deutschen Tastatur kaum tippen.'
+    : '';
+  $('#ldRareList').innerHTML =
+    `Seltene Zeichen, schwer erreichbar auf deutscher Tastatur: ${shown.join(' · ')}${more}.${stuck}`;
+}
+
+function resetLoadForm(): void {
+  pendingEpub = null;
+  rareFound = [];
+  ldText.value = '';
+  ldText.disabled = false;
+  ldText.placeholder = '';
+  ldTitle.value = '';
+  ldAuthor.value = '';
+  ldFile.value = '';
+  ldInfo.hidden = true;
+  ldRare.hidden = true;
+  ldReplace.checked = true;
+}
+
+function loadError(text: string): void {
+  ldMsg.className = 'msg err';
+  ldMsg.textContent = text;
+}
+
+/** Buch speichern und öffnen; false, wenn der Speicher voll ist. */
+function saveBook(b: Book): boolean {
+  books.push(b);
+  if (store.set('books', books)) return true;
+  books.pop();
+  loadError(
+    'Der Browser-Speicher ist voll (ca. 5 MB). Lösche einen anderen Text, um Platz zu schaffen. Ein Buch braucht etwa 1–2 MB.',
+  );
+  return false;
+}
+
 $('#loadBtn').onclick = () => {
   ldMsg.textContent = '';
   renderBookList();
@@ -391,55 +520,111 @@ $('#bookList').addEventListener('click', (e) => {
   if (d && confirm('Diesen Text wirklich löschen?')) {
     books = books.filter((b) => b.id !== d);
     store.set('books', books);
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Fortschritt ist ein Wörterbuch nach Buch-ID
+    /* eslint-disable @typescript-eslint/no-dynamic-delete -- Wörterbücher nach Buch-ID */
     delete progress[d];
+    delete done[d];
+    /* eslint-enable @typescript-eslint/no-dynamic-delete */
     store.set('progress', progress);
+    store.set('done', done);
     if (book.id === d) openBook('demo', 0);
     renderBookList();
   }
 });
+
 ldFile.addEventListener('change', async () => {
   const f = ldFile.files?.[0];
+  pendingEpub = null;
+  ldText.disabled = false;
+  ldText.placeholder = '';
+  ldInfo.hidden = true;
+  ldRare.hidden = true;
+  ldMsg.className = 'msg';
+  ldMsg.textContent = '';
   if (!f) return;
-  ldText.value = await f.text();
-  if (!ldTitle.value) ldTitle.value = f.name.replace(/\.[^.]+$/, '');
+  if (!/\.epub$/i.test(f.name) && f.type !== 'application/epub+zip') {
+    ldText.value = await f.text();
+    if (!ldTitle.value) ldTitle.value = f.name.replace(/\.[^.]+$/, '');
+    showRare(prepare(ldText.value).paragraphs);
+    return;
+  }
+  try {
+    const eb = readEpub(new Uint8Array(await f.arrayBuffer()));
+    pendingEpub = { book: eb, file: f.name };
+    ldTitle.value = eb.title;
+    ldAuthor.value = eb.author;
+    ldText.value = '';
+    ldText.disabled = true;
+    ldText.placeholder = 'Der Text kommt aus der EPUB-Datei.';
+    const paras = eb.chapters.flatMap((c) => c.paragraphs.map(cleanParagraph));
+    const words = paras.reduce((a, p) => a + wc(p), 0);
+    const ed = [eb.publisher, eb.date?.slice(0, 4)].filter(Boolean).join(' ');
+    const nCh = eb.chapters.filter((c) => c.paragraphs.length).length;
+    ldInfo.textContent =
+      `EPUB erkannt: ${nCh} Kapitel, ${words.toLocaleString('de-DE')} Wörter${ed ? ' · Ausgabe: ' + ed : ''}`.replace(
+        /\.?$/,
+        '.',
+      );
+    ldInfo.hidden = false;
+    showRare(paras);
+  } catch (err) {
+    ldFile.value = '';
+    loadError(err instanceof EpubError ? err.message : 'Die Datei konnte nicht gelesen werden.');
+  }
 });
+let rareTimer = 0;
+ldText.addEventListener('input', () => {
+  clearTimeout(rareTimer);
+  rareTimer = window.setTimeout(() => {
+    if (!pendingEpub) showRare(prepare(ldText.value).paragraphs);
+  }, 300);
+});
+
 $('#ldGo').onclick = () => {
   ldMsg.className = 'msg';
-  const raw = ldText.value;
-  if (raw.trim().length < 200) {
-    ldMsg.className = 'msg err';
-    ldMsg.textContent = 'Bitte mindestens ein paar Absätze Text einfügen.';
-    return;
+  clearTimeout(rareTimer);
+  if (!pendingEpub) showRare(prepare(ldText.value).paragraphs);
+  const replace = ldReplace.checked && rareFound.length > 0;
+  const id = 'b' + Date.now().toString(36);
+  let b: Book;
+  let words: number;
+  if (pendingEpub) {
+    const eb = pendingEpub.book;
+    const { chapters, sections } = assembleChapters(eb.chapters, { replace });
+    if (!sections.length) return loadError('Im EPUB wurde kein Text gefunden.');
+    b = {
+      id,
+      title: ldTitle.value.trim() || eb.title,
+      author: ldAuthor.value.trim(),
+      source: {
+        name: pendingEpub.file,
+        edition: [eb.publisher, eb.date?.slice(0, 4)].filter(Boolean).join(' ') || undefined,
+      },
+      chapters,
+      sections,
+      created: Date.now(),
+    };
+    words = sections.reduce((a, s) => a + wc(s.text), 0);
+  } else {
+    const raw = ldText.value;
+    if (raw.trim().length < 200)
+      return loadError('Bitte mindestens ein paar Absätze Text einfügen oder ein EPUB wählen.');
+    const p = prepare(raw);
+    const paras = replace ? p.paragraphs.map(replaceRare) : p.paragraphs;
+    const secs = segment(paras);
+    if (!secs.length) return loadError('Im Text wurden keine Absätze gefunden.');
+    b = {
+      id,
+      title: ldTitle.value.trim() || p.headings[0] || 'Ohne Titel',
+      author: ldAuthor.value.trim(),
+      sections: secs,
+      created: Date.now(),
+    };
+    words = paras.reduce((a, x) => a + wc(x), 0);
   }
-  const p = prepare(raw);
-  const secs = segment(p.paragraphs);
-  if (!secs.length) {
-    ldMsg.className = 'msg err';
-    ldMsg.textContent = 'Im Text wurden keine Absätze gefunden.';
-    return;
-  }
-  const b: Book = {
-    id: 'b' + Date.now().toString(36),
-    title: ldTitle.value.trim() || p.headings[0] || 'Ohne Titel',
-    author: ldAuthor.value.trim(),
-    sections: secs,
-    created: Date.now(),
-  };
-  books.push(b);
-  if (!store.set('books', books)) {
-    books.pop();
-    ldMsg.className = 'msg err';
-    ldMsg.textContent = 'Der Browser-Speicher ist voll. Lösche einen anderen Text oder lade ein kürzeres Kapitel.';
-    return;
-  }
-  const words = p.paragraphs.reduce((a, x) => a + wc(x), 0);
-  let m = `${secs.length} Abschnitte, ${words} Wörter geladen.`;
-  if (p.rare.length) m += ` Seltene Zeichen im Text: ${p.rare.slice(0, 12).join(' ')}`;
-  ldText.value = '';
-  ldTitle.value = '';
-  ldAuthor.value = '';
-  ldFile.value = '';
+  if (!saveBook(b)) return;
+  const chapters = b.chapters ? `${b.chapters.length} Kapitel, ` : '';
+  const m = `${chapters}${b.sections.length} Abschnitte, ${words.toLocaleString('de-DE')} Wörter geladen.`;
+  resetLoadForm();
   renderBookList();
   ldMsg.textContent = m;
   loadDlg.close();
