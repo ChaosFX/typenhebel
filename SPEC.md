@@ -65,6 +65,7 @@ Dieses Dokument ist die Arbeitsgrundlage für Claude Code. Der funktionierende P
 │  ├─ ui/                     # Rendering: Text, Cursor, Ergebnis, Dialoge
 │  ├─ audio/sound.ts
 │  ├─ data/db.ts              # Dexie-Schema, Migrationen, Export/Import
+│  ├─ data/records.ts         # Datensätze, Exportformat, Zusammenführen (ohne IndexedDB, getestet)
 │  ├─ epub/import.ts
 │  └─ main.ts
 ├─ public/fonts/              # selbst gehostet (WOFF2)
@@ -164,6 +165,9 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - Rohdaten (`events`) nur für die letzten 30 Sessions, ältere werden zu Aggregaten verdichtet.
 - Export/Import als JSON (Profil, Sessions, optional Bücher), Import mit Versionsprüfung und Zusammenführen statt Überschreiben.
 - Hinweis in der UI, dass Browserdaten gelöscht werden können; Erinnerung zum Export alle ~30 Sessions.
+- Umgesetzt (2026-11-14): Dexie-Datenbank `typenhebel` mit Tabellen `books` (Metadaten), `texts` (Abschnitte je Buch), `sessions`, `progress`, `kv` (Profil, aktuelles Buch, Stand der letzten Sicherung). Nur die Einstellungen bleiben in localStorage (synchron beim Start nötig, gegen Farbflackern). „Verdichten“ heißt: Ältere Sessions behalten ihre Kennzahlen, nur die Tastenereignisse entfallen; das Profil aggregiert ohnehin alle Sessions. Auswertungen, die Rohdaten brauchen (Phase 3: Ermüdung, Post-Error-Slowing), stützen sich deshalb auf die letzten 30 Sessions.
+- Zusammenführen beim Import: Sessions und Bücher nach ID entdoppeln. Profil: Enthält der Import alle lokalen Sessions, gilt sein Profil; ist er vollständig lokal vorhanden, ändert sich nichts; sind beide disjunkt, werden die Profile addiert; bei teilweiser Überschneidung zählen nur neue Sessions mit Rohdaten. Fortschritt: erledigte Abschnitte vereinigen, lokale Leseposition hat Vorrang. Der Export aus Phase 0/1 (`version: 1`) wird weiter angenommen.
+- Ergänzt (Dominik, 2026-11-14): **Buchmenü** in der Kopfzeile zum Wechseln zwischen den geladenen Büchern; jedes Buch merkt sich seine Stelle.
 
 ### Phase 3: Analyse v2 und adaptives Training
 - `keyboard.ts`: QWERTZ-Zuordnung Zeichen → Finger/Hand/Reihe, Nachbartasten, Shift-Seite.
@@ -223,9 +227,9 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 1. ~~**Name** des Projekts~~ → entschieden: **Typenhebel** (vorher Arbeitstitel „Anschlag“; Logo-Entwürfe in `design/`).
 2. **Korpus**: Nur Nutzer-Import oder später eingebauter, lizenzgeprüfter Korpus?
 3. **Framework**: Vanilla TS beibehalten oder Svelte?
-4. **Standardmodus**: Strikt (Genauigkeit zuerst) oder Frei?
-5. **Sound-Default**: an oder aus?
-6. **Veröffentlichung**: Öffentliche GitHub-Seite oder zunächst nur privat/lokal?
+4. ~~**Standardmodus**~~ → entschieden: **Strikt** (2026-11-14).
+5. ~~**Sound-Default**~~ → entschieden: **an** (2026-11-14).
+6. ~~**Veröffentlichung**~~ → entschieden: **öffentlich**, Repo ChaosFX/typenhebel, GitHub Pages.
 7. **Plattform des Alltags-Tests**: Welche Tastatur(en) und Betriebssysteme nutzt du? Bestimmt die Testmatrix.
 
 ---
