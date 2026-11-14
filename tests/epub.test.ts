@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import fs from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { assembleChapters, chapterOf, chapterRange } from '../src/core/book';
 import { findRare } from '../src/core/rare';
 import { wc } from '../src/core/text';
@@ -85,9 +85,16 @@ describe('assembleChapters', () => {
 // Akzeptanz Phase 1 mit den echten Beispielen (liegen nur lokal in samples/, nicht im Repo)
 const ZWEIG = 'samples/die-welt-von-gestern.epub';
 describe.skipIf(!fs.existsSync(ZWEIG))('Akzeptanz: Die Welt von Gestern', () => {
-  const book = readEpub(new Uint8Array(fs.readFileSync(ZWEIG)));
-  const { chapters, sections } = assembleChapters(book.chapters);
-  const text = sections.map((s) => s.text).join('\n');
+  // Erst in beforeAll lesen: Der describe-Rumpf läuft auch, wenn die Tests übersprungen werden.
+  let book: ReturnType<typeof readEpub>;
+  let chapters: ReturnType<typeof assembleChapters>['chapters'];
+  let sections: ReturnType<typeof assembleChapters>['sections'];
+  let text: string;
+  beforeAll(() => {
+    book = readEpub(new Uint8Array(fs.readFileSync(ZWEIG)));
+    ({ chapters, sections } = assembleChapters(book.chapters));
+    text = sections.map((s) => s.text).join('\n');
+  });
 
   test('vollständig geladen, 18 Kapitel', () => {
     expect(book.title).toBe('Die Welt von Gestern');
