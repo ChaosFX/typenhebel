@@ -37,7 +37,6 @@
           <div class="ba" id="bookAuthor"></div>
         </div>
         <nav class="nav" aria-label="Abschnitte">
-          <select id="bookSel" class="chap" aria-label="Buch" title="Buch wählen" hidden></select>
           <select id="chapSel" class="chap" aria-label="Kapitel" title="Kapitel wählen" hidden></select>
           <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt">‹</button>
           <span id="secInfo"></span>
@@ -47,6 +46,7 @@
           <button id="modeBtn"></button>
           <button id="soundBtn"></button>
           <button id="themeBtn"></button>
+          <button id="libBtn">Bibliothek</button>
           <button id="loadBtn">Text laden</button>
           <button id="profBtn">Profil</button>
         </div>
@@ -108,10 +108,38 @@
           >
         </div>
         <div class="msg" id="ldMsg" role="status"></div>
-        <h3 style="margin-top: 1.2rem">Meine Texte</h3>
-        <ul class="books" id="bookList"></ul>
         <div class="actions">
           <button id="ldClose">Schließen</button><button class="primary" id="ldGo">Laden</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="libDlg" class="wide" aria-labelledby="libH">
+      <div class="in">
+        <div class="lib-head">
+          <h2 id="libH">Bibliothek</h2>
+          <button class="primary" id="libClose">Schließen</button>
+        </div>
+        <ul class="shelf" id="shelf"></ul>
+      </div>
+    </dialog>
+
+    <dialog id="coverDlg" aria-labelledby="cvH">
+      <div class="in">
+        <h2 id="cvH">Cover wählen</h2>
+        <p class="small" id="cvTitle"></p>
+        <div class="cv">
+          <div class="cv-prev" id="cvPrev"></div>
+          <div class="cv-opts">
+            <div class="cv-label">Gestaltung</div>
+            <div class="cv-layouts" id="cvLayouts"></div>
+            <div class="cv-label">Farbe</div>
+            <div class="cv-pal" id="cvPal"></div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="cvReset">Standard</button><button id="cvDice">Würfeln</button
+          ><button class="primary" id="cvDone">Fertig</button>
         </div>
       </div>
     </dialog>

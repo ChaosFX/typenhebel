@@ -4,6 +4,14 @@ import {
   chapterOf,
   chapterRange,
   cleanParagraph,
+  coverStyle,
+  coverSvg,
+  LAYOUT_NAMES,
+  LAYOUTS,
+  PALETTES,
+  randomCover,
+  type CoverChoice,
+  type Layout,
   emptyProfile,
   findRare,
   mergeProfile,
@@ -200,7 +208,7 @@ function renderSection(): void {
   el.text.appendChild(el.caret);
   $('#bookTitle').textContent = book.title;
   $('#bookAuthor').textContent = book.author || '';
-  renderBookNav();
+  refreshLibrary();
   renderChapterNav();
   el.veil.hidden = true;
   if (!saveWarned) el.hint.textContent = '';
@@ -264,35 +272,137 @@ function bookProgress(b: BookMeta): string {
   return parts.join(' · ');
 }
 
-// ---------- Buchmenü ----------
-/** Auswahl zwischen den Büchern; erscheint, sobald mehr als der Demotext geladen ist. */
-function renderBookNav(): void {
-  const sel = $<HTMLSelectElement>('#bookSel');
-  if (!books.length) {
-    sel.hidden = true;
-    sel.innerHTML = '';
-    return;
-  }
-  sel.innerHTML =
-    allBooks()
-      .map((b) => {
-        const pct = doneSet(b.id).size ? ` · ${percentDone(b)} %` : '';
-        return `<option value="${esc(b.id)}">${esc(b.title)}${pct}</option>`;
-      })
-      .join('') + '<option value="" disabled>──────────</option><option value=":load">Text laden …</option>';
-  sel.value = book.id;
-  sel.hidden = false;
+// ---------- Bibliothek ----------
+const libDlg = $<HTMLDialogElement>('#libDlg');
+const coverDlg = $<HTMLDialogElement>('#coverDlg');
+/** Vom Nutzer gewählte Cover je Buch-ID */
+let covers: Record<string, CoverChoice> = {};
+const coverOf = (b: BookMeta): CoverChoice => covers[b.id] ?? coverStyle(b);
+/** Angaben fürs Cover; der Demotext trägt im Autorfeld einen Hinweis, auf dem Cover steht „Typenhebel“. */
+const coverInfo = (b: BookMeta): BookMeta => (b.id === DEMO.id ? { ...b, author: 'Typenhebel' } : b);
+
+function shelfItem(b: BookMeta): string {
+  const pct = percentDone(b);
+  const cur = b.id === book.id;
+  const author = b.id === DEMO.id ? 'Zum Ausprobieren' : b.author;
+  return `<li class="shelf-item${cur ? ' current' : ''}">
+    <button class="cover" data-open="${esc(b.id)}" aria-label="${esc(b.title)} öffnen">${coverSvg(coverInfo(b), coverOf(b))}</button>
+    <div class="shelf-meta">
+      ${cur ? '<span class="now">Gerade offen</span>' : ''}
+      <b>${esc(b.title)}</b>
+      ${author ? `<span class="who">${esc(author)}</span>` : ''}
+      <div class="meter" role="progressbar" aria-label="Fortschritt" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+      <small>${bookProgress(b)}</small>
+      <div class="shelf-actions">
+        <button class="link" data-cover="${esc(b.id)}">Cover ändern</button>
+        ${b.id === DEMO.id ? '' : `<button class="link" data-del="${esc(b.id)}">Löschen</button>`}
+      </div>
+    </div>
+  </li>`;
 }
 
-$<HTMLSelectElement>('#bookSel').addEventListener('change', (e) => {
-  const sel = e.target as HTMLSelectElement;
-  const id = sel.value;
-  if (id === ':load') {
-    sel.value = book.id;
-    openLoadDialog();
-    return;
-  }
-  void openBook(id);
+function renderLibrary(): void {
+  $('#shelf').innerHTML =
+    allBooks().map(shelfItem).join('') +
+    `<li class="shelf-item"><button class="cover add" id="libLoad"><span>+</span>Text laden</button>
+      <div class="shelf-meta"><small>EPUB oder TXT aus deiner Sammlung, z. B. von projekt-gutenberg.org</small></div></li>`;
+}
+
+/** Nach Änderungen an Büchern oder Fortschritt: Bibliothek aktualisieren, falls sie offen ist. */
+function refreshLibrary(): void {
+  if (libDlg.open) renderLibrary();
+}
+
+function openLibrary(): void {
+  renderLibrary();
+  libDlg.showModal();
+  document.querySelector<HTMLElement>('#shelf .current .cover')?.focus();
+}
+$('#libBtn').onclick = openLibrary;
+$('#bookTitle').onclick = openLibrary;
+$('#libClose').onclick = () => libDlg.close();
+libDlg.addEventListener('close', () => focusInput());
+
+$('#shelf').addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('button');
+  if (!btn) return;
+  if (btn.id === 'libLoad') return openLoadDialog();
+  const { open, cover, del } = btn.dataset;
+  if (open) {
+    libDlg.close();
+    void openBook(open);
+  } else if (cover) openCoverPicker(cover);
+  else if (del) removeBook(del);
+});
+
+function removeBook(id: string): void {
+  const b = books.find((x) => x.id === id);
+  if (!b || !confirm(`„${b.title}“ wirklich löschen? Der Fortschritt darin geht verloren, dein Profil bleibt.`)) return;
+  (db ? deleteBook(db, id) : Promise.resolve()).then(
+    () => {
+      books = books.filter((x) => x.id !== id);
+      progress.delete(id);
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Wörterbuch nach Buch-ID
+      delete covers[id];
+      if (book.id === id) void openBook(DEMO.id, 0);
+      renderLibrary();
+    },
+    (err: unknown) => {
+      console.error(err);
+      alert('Der Text konnte nicht gelöscht werden.');
+    },
+  );
+}
+
+// ---------- Cover wählen ----------
+let coverBook: BookMeta | null = null;
+
+function renderCoverPicker(): void {
+  const b = coverBook!;
+  const c = coverOf(b);
+  $('#cvPrev').innerHTML = coverSvg(coverInfo(b), c);
+  $('#cvLayouts').innerHTML = LAYOUTS.map(
+    (l) =>
+      `<button class="cv-layout" data-layout="${l}" aria-pressed="${l === c.layout}">${coverSvg(coverInfo(b), { layout: l, palette: c.palette })}<span>${LAYOUT_NAMES[l]}</span></button>`,
+  ).join('');
+  $('#cvPal').innerHTML = PALETTES.map(
+    (p) =>
+      `<button class="cv-swatch" data-palette="${p.name}" aria-pressed="${p.name === c.palette}" title="${p.name}" aria-label="Farbe ${p.name}" style="--sw-bg:${p.bg};--sw-ac:${p.accent}"></button>`,
+  ).join('');
+}
+
+function setCover(c: CoverChoice | null): void {
+  const id = coverBook!.id;
+  if (c) covers[id] = c;
+  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Wörterbuch nach Buch-ID
+  else delete covers[id];
+  const snapshot = { ...covers };
+  persist((d) => setKv(d, 'covers', snapshot));
+  renderCoverPicker();
+  refreshLibrary();
+}
+
+function openCoverPicker(id: string): void {
+  coverBook = allBooks().find((b) => b.id === id) ?? null;
+  if (!coverBook) return;
+  $('#cvTitle').textContent = coverBook.title;
+  renderCoverPicker();
+  coverDlg.showModal();
+}
+$('#cvLayouts').addEventListener('click', (e) => {
+  const l = (e.target as HTMLElement).closest<HTMLElement>('[data-layout]')?.dataset.layout as Layout | undefined;
+  if (l) setCover({ ...coverOf(coverBook!), layout: l });
+});
+$('#cvPal').addEventListener('click', (e) => {
+  const p = (e.target as HTMLElement).closest<HTMLElement>('[data-palette]')?.dataset.palette;
+  if (p) setCover({ ...coverOf(coverBook!), palette: p });
+});
+$('#cvDice').onclick = () => setCover(randomCover(coverOf(coverBook!)));
+$('#cvReset').onclick = () => setCover(null);
+$('#cvDone').onclick = () => coverDlg.close();
+coverDlg.addEventListener('close', () => {
+  if (!coverBook) return;
+  document.querySelector<HTMLElement>(`#shelf [data-cover="${CSS.escape(coverBook.id)}"]`)?.focus();
 });
 
 function paint(i: number): void {
@@ -449,7 +559,7 @@ function finish(): void {
   ds.add(secIdx);
   saveProgress(book.id, { section: (secIdx + 1) % book.sections.length, done: [...ds].sort((a, b) => a - b) });
   renderChapterNav();
-  renderBookNav();
+  refreshLibrary();
   snd.play('done');
   showResult(st, { newBest: !first && st.wpm > prevBest, perfect: st.errors === 0 });
 }
@@ -526,17 +636,6 @@ const ldFile = $<HTMLInputElement>('#ldFile');
 const ldText = $<HTMLTextAreaElement>('#ldText');
 const ldMsg = $('#ldMsg');
 
-function renderBookList(): void {
-  const list = $('#bookList');
-  list.innerHTML = allBooks()
-    .map(
-      (b) =>
-        `<li><span>${esc(b.title)}${b.author && b.id !== 'demo' ? ' <small>– ' + esc(b.author) + '</small>' : ''}<br><small>${bookProgress(b)}</small></span>
-    <span><button data-open="${esc(b.id)}">Öffnen</button>${b.id === 'demo' ? '' : ` <button data-del="${esc(b.id)}">Löschen</button>`}</span></li>`,
-    )
-    .join('');
-}
-
 /** Ausgewähltes, aber noch nicht geladenes EPUB */
 let pendingEpub: { book: EpubBook; file: string } | null = null;
 const ldInfo = $('#ldInfo');
@@ -607,38 +706,11 @@ async function saveBook(b: Book): Promise<boolean> {
 
 function openLoadDialog(): void {
   ldMsg.textContent = '';
-  renderBookList();
   loadDlg.showModal();
 }
 $('#loadBtn').onclick = openLoadDialog;
 $('#ldClose').onclick = () => loadDlg.close();
 loadDlg.addEventListener('close', () => focusInput());
-$('#bookList').addEventListener('click', (e) => {
-  const ds = (e.target as HTMLElement).dataset;
-  const o = ds.open;
-  const d = ds.del;
-  if (o) {
-    loadDlg.close();
-    void openBook(o);
-  }
-  if (d && confirm('Diesen Text wirklich löschen? Der Fortschritt darin geht verloren, dein Profil bleibt.')) {
-    const del = db ? deleteBook(db, d) : Promise.resolve();
-    del.then(
-      () => {
-        books = books.filter((b) => b.id !== d);
-        progress.delete(d);
-        if (book.id === d) void openBook(DEMO.id, 0);
-        else renderBookNav();
-        renderBookList();
-      },
-      (e: unknown) => {
-        console.error(e);
-        loadError('Der Text konnte nicht gelöscht werden.');
-      },
-    );
-  }
-});
-
 ldFile.addEventListener('change', async () => {
   const f = ldFile.files?.[0];
   pendingEpub = null;
@@ -736,9 +808,9 @@ $('#ldGo').onclick = async () => {
   const chapters = b.chapters ? `${b.chapters.length} Kapitel, ` : '';
   const m = `${chapters}${b.sections.length} Abschnitte, ${words.toLocaleString('de-DE')} Wörter geladen.`;
   resetLoadForm();
-  renderBookList();
   ldMsg.textContent = m;
   loadDlg.close();
+  if (libDlg.open) libDlg.close();
   void openBook(b.id, 0);
 };
 
@@ -805,6 +877,7 @@ async function reloadState(): Promise<string | null> {
   progress = st.progress;
   profile = st.profile;
   exportedAtSessions = st.exportedAtSessions;
+  covers = st.covers;
   return st.current;
 }
 
@@ -844,7 +917,7 @@ $<HTMLInputElement>('#profFile').addEventListener('change', async (e) => {
     if (r.unprofiled) m += ` ${r.unprofiled} ältere Abschnitte ohne Rohdaten fließen nicht ins Profil ein.`;
     profileMessage(m);
     renderProfile();
-    renderBookNav();
+    refreshLibrary();
     renderChapterNav();
   } catch (err) {
     console.error(err);
