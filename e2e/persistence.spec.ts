@@ -77,46 +77,91 @@ test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }
 
   await page.reload();
   await expect(page.locator('#bookTitle')).toHaveText('Altes Buch');
-  await expect(page.locator('#bookSel option:checked')).toHaveText('Altes Buch · 66 %');
+  await page.locator('#libBtn').click();
+  await expect(page.locator('.shelf-item.current')).toContainText('Altes Buch');
+  await expect(page.locator('.shelf-item.current')).toContainText('66 % geschafft');
 });
 
-test('Buchmenü wechselt zwischen Büchern und merkt sich die Stelle', async ({ page }) => {
+/** Buch in der Bibliothek öffnen (Klick aufs Cover). */
+async function openFromLibrary(page: Page, title: string): Promise<void> {
+  await page.locator('#libBtn').click();
+  await page.locator('.shelf-item', { hasText: title }).locator('.cover').click();
+  await expect(page.locator('#libDlg')).toBeHidden();
+  await expect(page.locator('#bookTitle')).toHaveText(title);
+}
+
+test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator('#bookSel')).toBeHidden(); // nur Demotext
   await page.locator('#next').click();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
 
-  await importEpub(page);
-  const sel = page.locator('#bookSel');
-  await expect(sel).toBeVisible();
-  await expect(sel.locator('option:not([disabled])')).toHaveText(['Demotext', 'Testbuch', 'Text laden …']);
+  // Nur Demotext: Bibliothek zeigt ihn und die Kachel zum Laden
+  await page.locator('#libBtn').click();
+  await expect(page.locator('.shelf-item')).toHaveCount(2);
+  await expect(page.locator('.shelf-item.current')).toContainText('Gerade offen');
+  await expect(page.locator('.shelf-item.current svg')).toHaveAttribute('aria-label', 'Demotext – Typenhebel');
+  await expect(page.locator('.shelf-item.current [data-del]')).toHaveCount(0);
+  await page.locator('#libLoad').click();
+  await expect(page.locator('#loadDlg')).toBeVisible();
+  await page
+    .locator('#ldFile')
+    .setInputFiles({ name: 'testbuch.epub', mimeType: 'application/epub+zip', buffer: Buffer.from(makeEpub()) });
+  await expect(page.locator('#ldInfo')).toBeVisible();
+  await page.locator('#ldGo').click();
+  await expect(page.locator('#libDlg')).toBeHidden();
+  await expect(page.locator('#bookTitle')).toHaveText('Testbuch');
 
-  await sel.selectOption({ label: 'Demotext' });
-  await expect(page.locator('#bookTitle')).toHaveText('Demotext');
+  await openFromLibrary(page, 'Demotext');
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
   await expect(page.locator('#chapSel')).toBeHidden();
   await expect(page.locator('#inp')).toBeFocused();
 
-  await sel.selectOption({ label: 'Testbuch' });
-  await expect(page.locator('#bookTitle')).toHaveText('Testbuch');
+  await page.locator('#bookTitle').click(); // Titel öffnet ebenfalls die Bibliothek
+  await expect(page.locator('#libDlg')).toBeVisible();
+  await page.locator('.shelf-item', { hasText: 'Testbuch' }).locator('.cover').click();
   await expect(page.locator('#chapSel')).toBeVisible();
-
   await page.reload();
   await expect(page.locator('#bookTitle')).toHaveText('Testbuch');
 
-  await sel.selectOption({ label: 'Text laden …' });
-  await expect(page.locator('#loadDlg')).toBeVisible();
-  await expect(sel).toHaveValue(/.+/);
-  await page.locator('#ldClose').click();
-
-  // Löschen: Menü verschwindet wieder, Demotext ist offen
-  await page.locator('#loadBtn').click();
+  // Löschen: Demotext öffnet sich wieder
+  await page.locator('#libBtn').click();
   page.once('dialog', (d) => d.accept());
-  await page.locator('[data-del]').click();
-  await expect(page.locator('#bookList li')).toHaveCount(1);
-  await page.locator('#ldClose').click();
+  await page.locator('.shelf-item', { hasText: 'Testbuch' }).locator('[data-del]').click();
+  await expect(page.locator('.shelf-item')).toHaveCount(2);
   await expect(page.locator('#bookTitle')).toHaveText('Demotext');
-  await expect(sel).toBeHidden();
+});
+
+test('Cover wechseln: Layout, Farbe, Würfeln, Standard – bleibt nach Neuladen', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('#libBtn').click();
+  const cover = page.locator('.shelf-item.current .cover');
+  const before = await cover.innerHTML();
+  await page.locator('.shelf-item.current [data-cover]').click();
+  await expect(page.locator('#coverDlg')).toBeVisible();
+  await expect(page.locator('.cv-layout')).toHaveCount(4);
+  await expect(page.locator('.cv-swatch')).toHaveCount(9);
+
+  await page.locator('.cv-layout', { hasText: 'Typoskript' }).click();
+  await expect(page.locator('.cv-layout', { hasText: 'Typoskript' })).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('.cv-swatch[title="Aubergine"]').click();
+  await expect(page.locator('.cv-swatch[title="Aubergine"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#cvPrev svg rect').first()).toHaveAttribute('fill', '#45293f');
+  const chosen = await page.locator('#cvPrev').innerHTML();
+  await page.locator('#cvDone').click();
+  await expect(cover).not.toHaveJSProperty('innerHTML', before);
+  expect(await cover.innerHTML()).toBe(chosen);
+
+  await page.reload();
+  await page.locator('#libBtn').click();
+  expect(await page.locator('.shelf-item.current .cover').innerHTML()).toBe(chosen);
+
+  await page.locator('.shelf-item.current [data-cover]').click();
+  await page.locator('#cvDice').click();
+  expect(await page.locator('#cvPrev').innerHTML()).not.toBe(chosen);
+  await page.locator('#cvReset').click();
+  expect(await page.locator('#cvPrev').innerHTML()).toBe(before);
+  await page.locator('#cvDone').click();
+  await expect(page.locator('.shelf-item.current [data-cover]')).toBeFocused();
 });
 
 test('Export und Import: Rundreise in einen leeren Browser', async ({ page, browser }) => {
@@ -149,7 +194,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   await expect(other.locator('#profMsg')).toHaveText('0 Abschnitte übernommen, 1 schon vorhanden.');
   await expect(other.locator('#profBody')).toContainText('1 Abschnitt ·');
   await other.locator('#profClose').click();
-  await other.locator('#bookSel').selectOption({ label: 'Testbuch · 33 %' });
+  await openFromLibrary(other, 'Testbuch');
   await expect(other.locator('#chapSel option').first()).toHaveText('✓ Motto · 1/1');
   await ctx.close();
 });
@@ -167,7 +212,7 @@ test('ungültige Sicherung wird abgewiesen', async ({ page }) => {
 test('Erinnerung zum Sichern nach 30 Abschnitten', async ({ page }) => {
   await seedLegacy(page, 29);
   await page.goto('./');
-  await page.locator('#bookSel').selectOption({ label: 'Demotext' });
+  await openFromLibrary(page, 'Demotext');
   await typeSection(page);
   await expect(page.locator('#resRemind')).toContainText('30 Abschnitte');
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#resExport').click()]);

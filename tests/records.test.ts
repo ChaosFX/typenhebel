@@ -196,4 +196,31 @@ describe('mergeImport', () => {
       { bookId: 'b1', section: 3, done: [0] },
     ]);
   });
+
+  test('Cover: lokale Wahl hat Vorrang, nur für bekannte Bücher', () => {
+    const l = local({ bookIds: new Set(['demo', 'b1']), covers: { b1: { layout: 'rahmen', palette: 'Moos' } } });
+    const r = mergeImport(
+      l,
+      file({
+        covers: {
+          b1: { layout: 'tasten', palette: 'Tinte' },
+          demo: { layout: 'initial', palette: 'Rost' },
+          fremd: { layout: 'tasten', palette: 'Tinte' },
+        },
+      }),
+    );
+    expect(r.covers).toEqual({
+      b1: { layout: 'rahmen', palette: 'Moos' },
+      demo: { layout: 'initial', palette: 'Rost' },
+    });
+  });
+
+  test('ungültige Cover-Angaben im Import fallen still weg', () => {
+    const f = parseExport(
+      JSON.stringify(
+        file({ covers: { a: { layout: 'rahmen', palette: 'Moos' }, b: { layout: 'neu', palette: 'x' } } as never }),
+      ),
+    );
+    expect(f.covers).toEqual({ a: { layout: 'rahmen', palette: 'Moos' } });
+  });
 });

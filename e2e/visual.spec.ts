@@ -1,6 +1,6 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
-const ADDITIONS = ['.brand'];
+const ADDITIONS = ['.brand', '#libBtn'];
 import { expect, test, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';

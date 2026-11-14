@@ -37,16 +37,16 @@ Abweichungen bitte mit Browser, Betriebssystem und Tastaturlayout notieren.
 | E7  | Kapitel „Wortableitung“ → im Text steht „chetos“ statt „χητος“              | Ersatz wirkt                                                               |
 | E8  | Beliebige andere EPUB-Datei (eigene Sammlung) laden und zwei Kapitel prüfen | keine Fußnoten, keine Seitenzahlen, keine Inhaltsverzeichnisse im Text     |
 
-## Speicher, Buchmenü, Sichern (Phase 2)
+## Speicher, Bibliothek, Sichern (Phase 2)
 
 Am besten in Chrome, Firefox und Safari jeweils einmal.
 
 | #   | Aktion                                                                              | Erwartung                                                                      |
 | --- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | P1  | Erste Öffnung nach dem Update (alter Stand mit Büchern und Verlauf)                 | Bücher, Fortschritt und Profil sind noch da, gleiches Buch offen               |
-| P2  | Zwei Bücher geladen → Buchmenü oben rechts (links neben den Kapiteln)               | Demotext und beide Bücher wählbar, Prozent geschafft dahinter                  |
-| P3  | Buch wechseln, ein paar Abschnitte weiter, zurückwechseln                           | jedes Buch öffnet an seiner eigenen Stelle                                     |
-| P4  | Im Buchmenü „Text laden …“                                                          | Dialog „Text laden“ öffnet sich, Menü zeigt weiter das aktuelle Buch           |
+| P2  | „Bibliothek“ (oder Klick auf den Buchtitel)                                         | Cover-Raster mit allen Büchern, Fortschritt, aktuelles Buch markiert           |
+| P3  | Buch per Cover öffnen, ein paar Abschnitte weiter, zurückwechseln                   | jedes Buch öffnet an seiner eigenen Stelle                                     |
+| P4  | „Cover ändern“: Gestaltung, Farbe, Würfeln, Standard; danach Seite neu laden        | Vorschau folgt sofort, Wahl bleibt erhalten                                    |
 | P5  | Profil → Exportieren (mit Büchern)                                                  | Datei `typenhebel-JJJJ-MM-TT.json` wird heruntergeladen                        |
 | P6  | Privates Fenster → Profil → Importieren … → diese Datei                             | Meldung „… Abschnitte übernommen, … Bücher“, Bücher im Menü, Profil wie vorher |
 | P7  | Dieselbe Datei noch einmal importieren                                              | „0 Abschnitte übernommen, … schon vorhanden“, Profil unverändert               |

@@ -1,8 +1,9 @@
 // IndexedDB über Dexie: Schema, Migration aus localStorage, Export/Import.
 import Dexie, { type EntityTable } from 'dexie';
-import { emptyProfile, type Book, type Profile, type Section } from '../core';
+import { emptyProfile, type Book, type CoverChoice, type Profile, type Section } from '../core';
 import {
   bookMeta,
+  cleanCovers,
   EXPORT_SCHEMA,
   fromLegacy,
   KEEP_EVENTS,
@@ -105,16 +106,18 @@ export interface LoadedState {
   profile: Profile;
   current: string | null;
   exportedAtSessions: number;
+  covers: Record<string, CoverChoice>;
 }
 
 export async function loadState(db: TypenhebelDb): Promise<LoadedState> {
-  const [books, sessions, progress, profile, current, exported] = await Promise.all([
+  const [books, sessions, progress, profile, current, exported, covers] = await Promise.all([
     db.books.orderBy('created').toArray(),
     db.sessions.orderBy('date').toArray(),
     db.progress.toArray(),
     db.kv.get('profile'),
     db.kv.get('current'),
     db.kv.get('exportedAtSessions'),
+    db.kv.get('covers'),
   ]);
   return {
     books,
@@ -123,6 +126,7 @@ export async function loadState(db: TypenhebelDb): Promise<LoadedState> {
     profile: (profile?.value as Profile | undefined) ?? emptyProfile(),
     current: (current?.value as string | undefined) ?? null,
     exportedAtSessions: (exported?.value as number | undefined) ?? 0,
+    covers: cleanCovers(covers?.value),
   };
 }
 
@@ -138,10 +142,16 @@ export async function saveBook(db: TypenhebelDb, b: Book): Promise<void> {
 }
 
 export async function deleteBook(db: TypenhebelDb, id: string): Promise<void> {
-  await db.transaction('rw', db.books, db.texts, db.progress, async () => {
+  await db.transaction('rw', [db.books, db.texts, db.progress, db.kv], async () => {
     await db.books.delete(id);
     await db.texts.delete(id);
     await db.progress.delete(id);
+    const covers = cleanCovers((await db.kv.get('covers'))?.value);
+    if (covers[id]) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Wörterbuch nach Buch-ID
+      delete covers[id];
+      await db.kv.put({ key: 'covers', value: covers });
+    }
   });
 }
 
@@ -186,6 +196,7 @@ export async function buildExport(db: TypenhebelDb, withBooks: boolean): Promise
       profile: ((await db.kv.get('profile'))?.value as Profile | undefined) ?? emptyProfile(),
       sessions: await db.sessions.orderBy('date').toArray(),
       progress: await db.progress.toArray(),
+      covers: cleanCovers((await db.kv.get('covers'))?.value),
     };
     if (withBooks) {
       const metas = await db.books.orderBy('created').toArray();
@@ -208,12 +219,14 @@ export async function importJson(db: TypenhebelDb, json: string): Promise<MergeR
       sessionIds: new Set((await db.sessions.toCollection().primaryKeys()) as string[]),
       bookIds: new Set(['demo', ...((await db.books.toCollection().primaryKeys()) as string[])]),
       progress: await db.progress.toArray(),
+      covers: cleanCovers((await db.kv.get('covers'))?.value),
     };
     const r = mergeImport(local, inc);
     for (const b of r.books) await saveBook(db, b);
     await db.sessions.bulkPut(r.sessions);
     await db.progress.bulkPut(r.progress);
     await db.kv.put({ key: 'profile', value: r.profile });
+    await db.kv.put({ key: 'covers', value: r.covers });
     await compactEvents(db);
     return r;
   });

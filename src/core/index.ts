@@ -30,3 +30,15 @@ export {
 } from './book';
 export { findRare, isTypable, replaceRare, replacementFor, type RareChar } from './rare';
 export { cleanParagraph, normalize } from './text';
+export {
+  coverStyle,
+  coverSvg,
+  DEFAULT_LAYOUTS,
+  isCoverChoice,
+  LAYOUT_NAMES,
+  LAYOUTS,
+  PALETTES,
+  randomCover,
+  type CoverChoice,
+  type Layout,
+} from './cover';
