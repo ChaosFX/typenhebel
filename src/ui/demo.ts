@@ -1,12 +1,5 @@
-import { segment, type Section } from '../core';
-
-export interface Book {
-  id: string;
-  title: string;
-  author: string;
-  sections: Section[];
-  created?: number;
-}
+import { segment } from '../core';
+import type { Book } from '../core/book';
 
 // Demotext (eigener Platzhalter, kein Zitat)
 const DEMO_PARAS = [
