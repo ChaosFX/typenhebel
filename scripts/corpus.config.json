@@ -1,0 +1,37 @@
+{
+  "source": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
+  "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
+  "retrieved": "2026-11-14",
+  "books": [
+    {
+      "id": "zweig-welt-von-gestern",
+      "file": "die-welt-von-gestern.epub",
+      "url": "https://www.projekt-gutenberg.org/"
+    },
+    {
+      "id": "goethe-faust",
+      "file": "faust-eine-tragoedie.epub",
+      "url": "https://www.projekt-gutenberg.org/"
+    },
+    {
+      "id": "horvath-jugend-ohne-gott",
+      "file": "jugend-ohne-gott.epub",
+      "url": "https://www.projekt-gutenberg.org/",
+      "skip": ["Zeittafel"]
+    },
+    {
+      "id": "dostojewski-karamasow",
+      "file": "die-brueder-karamasow.epub",
+      "url": "https://www.projekt-gutenberg.org/",
+      "skip": ["Anhang: Namensregister"],
+      "note": "Übersetzung: H. Röhl (Hermann Röhl † 1923 bzw. Hans Röhl † 1945)"
+    },
+    {
+      "id": "melville-moby-dick",
+      "file": "moby-dick-oder-der-weisse-wal.epub",
+      "url": "https://www.projekt-gutenberg.org/",
+      "note": "Übersetzung: Wilhelm Strüver (1927/28); Lebensdaten unbekannt, Schutzfrist ungeklärt – zurückgehalten",
+      "hold": true
+    }
+  ]
+}

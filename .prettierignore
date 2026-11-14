@@ -7,3 +7,5 @@ e2e/**/*.png
 package-lock.json
 SPEC.md
 design/
+# erzeugt von npm run corpus
+public/corpus/

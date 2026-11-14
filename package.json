@@ -11,7 +11,8 @@
     "test:proto": "node prototype/tests/core.test.mjs prototype/index.html",
     "e2e": "playwright test",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "corpus": "node scripts/corpus.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
