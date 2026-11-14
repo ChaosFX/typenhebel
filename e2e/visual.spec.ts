@@ -1,6 +1,9 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
-const ADDITIONS = ['.brand', '#libBtn'];
+// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Text laden, Profil).
+const ADDITIONS = ['.brand'];
+// Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen; dort ausblenden.
+const MOVED = ['#loadBtn', '#profBtn'];
 import { expect, test, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -15,7 +18,8 @@ async function shot(page: Page, url: string, theme: string): Promise<PNG> {
   await page.goto(url);
   await page.locator('#text .c').first().waitFor();
   await page.locator('#inp').focus();
-  if (!url.startsWith('file:')) await page.addStyleTag({ content: ADDITIONS.join(',') + '{display:none!important}' });
+  const hide = url.startsWith('file:') ? MOVED : ADDITIONS;
+  await page.addStyleTag({ content: hide.join(',') + '{display:none!important}' });
   await page.evaluate(() => document.fonts.ready);
   return PNG.sync.read(await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' }));
 }

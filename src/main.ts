@@ -1,6 +1,5 @@
 import {
   analyze,
-  assembleChapters,
   chapterOf,
   chapterRange,
   cleanParagraph,
@@ -41,6 +40,7 @@ import {
   setKv,
   TypenhebelDb,
 } from './data/db';
+import { checkCorpusBook, CORPUS_PREFIX, parseCorpusIndex, type CorpusEntry } from './data/corpus';
 import {
   bookMeta,
   EXPORT_REMINDER,
@@ -51,7 +51,7 @@ import {
   type SessionRecord,
 } from './data/records';
 import { migrateLegacyKeys, store } from './data/store';
-import { EpubError, readEpub, type EpubBook } from './epub/import';
+import { epubEdition, epubToBook, EpubError, readEpub, type EpubBook } from './epub/import';
 import { attachInput } from './input/engine';
 import { DEMO } from './ui/demo';
 import { esc, fmtTime, round1 } from './ui/format';
@@ -293,6 +293,7 @@ function shelfItem(b: BookMeta): string {
       ${author ? `<span class="who">${esc(author)}</span>` : ''}
       <div class="meter" role="progressbar" aria-label="Fortschritt" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
       <small>${bookProgress(b)}</small>
+      ${b.id.startsWith(CORPUS_PREFIX) && b.source ? `<small class="src">Quelle: ${esc(b.source.name)}</small>` : ''}
       <div class="shelf-actions">
         <button class="link" data-cover="${esc(b.id)}">Cover ändern</button>
         ${b.id === DEMO.id ? '' : `<button class="link" data-del="${esc(b.id)}">Löschen</button>`}
@@ -301,7 +302,72 @@ function shelfItem(b: BookMeta): string {
   </li>`;
 }
 
+// ---------- Mitgelieferte Bücher (public/corpus/) ----------
+let corpus: CorpusEntry[] | null = null;
+const installing = new Set<string>();
+
+/** Index der mitgelieferten Bücher laden (gleiche Herkunft, keine externe Anfrage). */
+async function loadCorpus(): Promise<void> {
+  if (corpus) return;
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}corpus/index.json`);
+    corpus = r.ok ? parseCorpusIndex(await r.json()) : [];
+  } catch {
+    corpus = [];
+  }
+}
+
+const fmtNum = (n: number): string => n.toLocaleString('de-DE');
+
+function availItem(c: CorpusEntry): string {
+  const busy = installing.has(c.id);
+  const meta: BookMeta = { id: c.id, title: c.title, author: c.author, sectionCount: c.sections };
+  const size = (c.bytes / 1e6).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  return `<li class="shelf-item avail${busy ? ' busy' : ''}">
+    <button class="cover" data-install="${esc(c.id)}" aria-label="${esc(c.title)} laden"${busy ? ' disabled' : ''}>${coverSvg(meta, coverOf(meta))}<span class="get">${busy ? 'Wird geladen …' : 'Laden'}</span></button>
+    <div class="shelf-meta">
+      <b>${esc(c.title)}</b>
+      <span class="who">${esc(c.author)}</span>
+      <small>${c.chapters > 1 ? c.chapters + ' Kapitel · ' : ''}${fmtNum(c.words)} Wörter · ${size} MB</small>
+      <small class="src">Quelle: ${esc(c.source.name)}</small>
+    </div>
+  </li>`;
+}
+
+async function installCorpusBook(id: string): Promise<void> {
+  const c = corpus?.find((x) => x.id === id);
+  if (!c || installing.has(id)) return;
+  installing.add(id);
+  libMessage('');
+  renderLibrary();
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}corpus/${c.file}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const b = checkCorpusBook(await r.json(), c);
+    if (await saveBook(b, libMessage)) {
+      libDlg.close();
+      await openBook(b.id, 0);
+    }
+  } catch (e) {
+    console.error(e);
+    libMessage('Das Buch konnte nicht geladen werden. Bitte später noch einmal versuchen.');
+  } finally {
+    installing.delete(id);
+    refreshLibrary();
+  }
+}
+
+function libMessage(text: string): void {
+  const m = $('#libMsg');
+  m.className = text ? 'msg err' : 'msg';
+  m.textContent = text;
+}
+
 function renderLibrary(): void {
+  const owned = new Set(books.map((b) => b.id));
+  const avail = (corpus ?? []).filter((c) => !owned.has(c.id));
+  $('#availH').hidden = avail.length === 0;
+  $('#avail').innerHTML = avail.map(availItem).join('');
   $('#shelf').innerHTML =
     allBooks().map(shelfItem).join('') +
     `<li class="shelf-item"><button class="cover add" id="libLoad"><span>+</span>Text laden</button>
@@ -314,8 +380,10 @@ function refreshLibrary(): void {
 }
 
 function openLibrary(): void {
+  libMessage('');
   renderLibrary();
   libDlg.showModal();
+  void loadCorpus().then(refreshLibrary);
   document.querySelector<HTMLElement>('#shelf .current .cover')?.focus();
 }
 $('#libBtn').onclick = openLibrary;
@@ -323,6 +391,10 @@ $('#bookTitle').onclick = openLibrary;
 $('#libClose').onclick = () => libDlg.close();
 libDlg.addEventListener('close', () => focusInput());
 
+$('#avail').addEventListener('click', (e) => {
+  const id = (e.target as HTMLElement).closest<HTMLElement>('[data-install]')?.dataset.install;
+  if (id) void installCorpusBook(id);
+});
 $('#shelf').addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest<HTMLElement>('button');
   if (!btn) return;
@@ -681,18 +753,16 @@ function loadError(text: string): void {
 }
 
 /** Buch speichern; false, wenn das nicht ging (Meldung steht dann im Dialog). */
-async function saveBook(b: Book): Promise<boolean> {
+async function saveBook(b: Book, report: (msg: string) => void = loadError): Promise<boolean> {
   if (!db) {
-    loadError(
-      'Dieser Browser erlaubt keine dauerhafte Speicherung (IndexedDB). Der Text kann nicht gespeichert werden.',
-    );
+    report('Dieser Browser erlaubt keine dauerhafte Speicherung (IndexedDB). Der Text kann nicht gespeichert werden.');
     return false;
   }
   try {
     await dbSaveBook(db, b);
   } catch (e) {
     console.error(e);
-    loadError(
+    report(
       isQuotaError(e)
         ? 'Der Browser-Speicher ist voll. Lösche einen anderen Text, um Platz zu schaffen.'
         : 'Der Text konnte nicht gespeichert werden.',
@@ -737,7 +807,7 @@ ldFile.addEventListener('change', async () => {
     ldText.placeholder = 'Der Text kommt aus der EPUB-Datei.';
     const paras = eb.chapters.flatMap((c) => c.paragraphs.map(cleanParagraph));
     const words = paras.reduce((a, p) => a + wc(p), 0);
-    const ed = [eb.publisher, eb.date?.slice(0, 4)].filter(Boolean).join(' ');
+    const ed = epubEdition(eb) ?? '';
     const nCh = eb.chapters.filter((c) => c.paragraphs.length).length;
     ldInfo.textContent =
       `EPUB erkannt: ${nCh} Kapitel, ${words.toLocaleString('de-DE')} Wörter${ed ? ' · Ausgabe: ' + ed : ''}`.replace(
@@ -769,21 +839,16 @@ $('#ldGo').onclick = async () => {
   let words: number;
   if (pendingEpub) {
     const eb = pendingEpub.book;
-    const { chapters, sections } = assembleChapters(eb.chapters, { replace });
-    if (!sections.length) return loadError('Im EPUB wurde kein Text gefunden.');
-    b = {
+    const made = epubToBook(eb, {
       id,
-      title: ldTitle.value.trim() || eb.title,
+      title: ldTitle.value.trim(),
       author: ldAuthor.value.trim(),
-      source: {
-        name: pendingEpub.file,
-        edition: [eb.publisher, eb.date?.slice(0, 4)].filter(Boolean).join(' ') || undefined,
-      },
-      chapters,
-      sections,
-      created: Date.now(),
-    };
-    words = sections.reduce((a, s) => a + wc(s.text), 0);
+      source: { name: pendingEpub.file, edition: epubEdition(eb) },
+      replace,
+    });
+    if (!made) return loadError('Im EPUB wurde kein Text gefunden.');
+    b = made;
+    words = b.sections.reduce((a, s) => a + wc(s.text), 0);
   } else {
     const raw = ldText.value;
     if (raw.trim().length < 200)

@@ -85,7 +85,7 @@ test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }
 /** Buch in der Bibliothek öffnen (Klick aufs Cover). */
 async function openFromLibrary(page: Page, title: string): Promise<void> {
   await page.locator('#libBtn').click();
-  await page.locator('.shelf-item', { hasText: title }).locator('.cover').click();
+  await page.locator('#shelf .shelf-item', { hasText: title }).locator('.cover').click();
   await expect(page.locator('#libDlg')).toBeHidden();
   await expect(page.locator('#bookTitle')).toHaveText(title);
 }
@@ -97,7 +97,7 @@ test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async 
 
   // Nur Demotext: Bibliothek zeigt ihn und die Kachel zum Laden
   await page.locator('#libBtn').click();
-  await expect(page.locator('.shelf-item')).toHaveCount(2);
+  await expect(page.locator('#shelf .shelf-item')).toHaveCount(2);
   await expect(page.locator('.shelf-item.current')).toContainText('Gerade offen');
   await expect(page.locator('.shelf-item.current svg')).toHaveAttribute('aria-label', 'Demotext – Typenhebel');
   await expect(page.locator('.shelf-item.current [data-del]')).toHaveCount(0);
@@ -118,7 +118,7 @@ test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async 
 
   await page.locator('#bookTitle').click(); // Titel öffnet ebenfalls die Bibliothek
   await expect(page.locator('#libDlg')).toBeVisible();
-  await page.locator('.shelf-item', { hasText: 'Testbuch' }).locator('.cover').click();
+  await page.locator('#shelf .shelf-item', { hasText: 'Testbuch' }).locator('.cover').click();
   await expect(page.locator('#chapSel')).toBeVisible();
   await page.reload();
   await expect(page.locator('#bookTitle')).toHaveText('Testbuch');
@@ -126,8 +126,8 @@ test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async 
   // Löschen: Demotext öffnet sich wieder
   await page.locator('#libBtn').click();
   page.once('dialog', (d) => d.accept());
-  await page.locator('.shelf-item', { hasText: 'Testbuch' }).locator('[data-del]').click();
-  await expect(page.locator('.shelf-item')).toHaveCount(2);
+  await page.locator('#shelf .shelf-item', { hasText: 'Testbuch' }).locator('[data-del]').click();
+  await expect(page.locator('#shelf .shelf-item')).toHaveCount(2);
   await expect(page.locator('#bookTitle')).toHaveText('Demotext');
 });
 
@@ -219,4 +219,37 @@ test('Erinnerung zum Sichern nach 30 Abschnitten', async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(/^typenhebel-\d{4}-\d\d-\d\d\.json$/);
   await expect(page.locator('#resRemind')).toHaveCount(0);
   await expect(page.locator('#resNext')).toBeFocused();
+});
+
+test('Mitgelieferte Bücher: mit einem Klick laden, löschen, Fehler', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('#libBtn').click();
+  await expect(page.locator('#availH')).toBeVisible();
+  const faust = page.locator('#avail .shelf-item', { hasText: 'Faust' });
+  await expect(faust).toContainText('Quelle: Projekt Gutenberg-DE');
+  const n = await page.locator('#avail .shelf-item').count();
+  expect(n).toBeGreaterThanOrEqual(4);
+
+  await faust.locator('.cover').click();
+  await expect(page.locator('#libDlg')).toBeHidden();
+  await expect(page.locator('#bookTitle')).toHaveText('Faust: Eine Tragödie');
+  await expect(page.locator('#chapSel option').first()).toHaveText(/^Zueignung/);
+  expect((await sectionText(page)).startsWith('Ihr naht euch wieder, schwankende Gestalten')).toBe(true);
+
+  await page.reload();
+  await page.locator('#libBtn').click();
+  await expect(page.locator('#shelf .shelf-item.current')).toContainText('Quelle: Projekt Gutenberg-DE');
+  await expect(page.locator('#avail .shelf-item')).toHaveCount(n - 1);
+
+  page.once('dialog', (d) => d.accept());
+  await page.locator('#shelf .shelf-item.current [data-del]').click();
+  await expect(page.locator('#avail .shelf-item')).toHaveCount(n);
+  await expect(page.locator('#bookTitle')).toHaveText('Demotext');
+
+  // Server antwortet nicht: verständliche Meldung, nichts gespeichert
+  await page.route('**/corpus/goethe-faust.json', (r) => r.fulfill({ status: 500 }));
+  await page.locator('#avail .shelf-item', { hasText: 'Faust' }).locator('.cover').click();
+  await expect(page.locator('#libMsg')).toHaveText(/konnte nicht geladen werden/);
+  await expect(page.locator('#avail .shelf-item')).toHaveCount(n);
+  await expect(page.locator('#libDlg')).toBeVisible();
 });

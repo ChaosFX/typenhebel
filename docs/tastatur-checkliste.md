@@ -52,3 +52,5 @@ Am besten in Chrome, Firefox und Safari jeweils einmal.
 | P7  | Dieselbe Datei noch einmal importieren                                              | „0 Abschnitte übernommen, … schon vorhanden“, Profil unverändert               |
 | P8  | Alte Sicherung aus Phase 0/1 (`typenhebel-daten.json`) importieren, falls vorhanden | wird angenommen                                                                |
 | P9  | Firefox: nach dem ersten geladenen Buch                                             | ggf. Rückfrage „Daten dauerhaft speichern?“ – erlauben                         |
+| P10 | Neues privates Fenster → Bibliothek → „Mitgeliefert“ → Faust anklicken              | Buch lädt in wenigen Sekunden und öffnet sich bei „Zueignung“                  |
+| P11 | Faust in der Bibliothek löschen                                                     | taucht wieder unter „Mitgeliefert“ auf                                         |
