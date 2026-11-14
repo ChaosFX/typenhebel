@@ -620,3 +620,44 @@ th {
     transition-duration: 0.001s !important;
   }
 }
+
+/* Marke */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.1rem 0 0.9rem;
+  color: var(--ink);
+}
+.brand .mark {
+  width: 2.7rem;
+  height: 2.7rem;
+  flex: none;
+  overflow: visible;
+}
+.brand .arm {
+  stroke: var(--ink);
+}
+.brand .head {
+  fill: var(--paper);
+  stroke: var(--ink);
+}
+.brand .t {
+  font-family: var(--serif);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+[data-theme='dark'] .brand .t {
+  fill: var(--accent);
+}
+.brand .dot {
+  fill: var(--accent);
+}
+.brand-name {
+  font-family: var(--serif);
+  font-size: 1.55rem;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  line-height: 1;
+}

@@ -5,10 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <title>Typenhebel – Literatur abtippen</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#efe9dc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141210" media="(prefers-color-scheme: dark)" />
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <div class="app">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <mask id="armMask" maskUnits="userSpaceOnUse">
+              <rect width="48" height="48" fill="#fff" />
+              <path d="M3 44.5 H8 C19 44.5 25.5 35 32 16" fill="none" stroke="#000" stroke-width="2.2" />
+            </mask>
+          </defs>
+          <path class="arm" d="M3 44.5 H8 C19 44.5 25.5 35 32 16" fill="none" stroke-width="6" mask="url(#armMask)" />
+          <g transform="rotate(22 33.5 11)">
+            <rect class="head" x="27.5" y="4.5" width="12" height="13" rx="2.6" stroke-width="1.9" />
+            <text class="t" x="33.5" y="14.6" text-anchor="middle">T</text>
+          </g>
+          <circle class="dot" cx="39.6" cy="15.6" r="2.8" />
+        </svg>
+        <span class="brand-name">Typenhebel</span>
+      </div>
       <header class="top">
         <div class="book">
           <div class="bt" id="bookTitle"></div>
