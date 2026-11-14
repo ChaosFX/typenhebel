@@ -19,6 +19,7 @@
     "@types/node": "^26.6.6",
     "@types/pngjs": "^6.0.5",
     "eslint": "^10.15.0",
+    "fake-indexeddb": "^6.2.8",
     "happy-dom": "^21.0.4",
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
@@ -29,6 +30,7 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
+    "dexie": "^4.4.7",
     "fflate": "^0.8.3"
   }
 }

@@ -1,5 +1,6 @@
-// localStorage unter `typenhebel.v1.*`. Wird in Phase 2 durch IndexedDB (Dexie) ersetzt.
-const PREFIX = 'typenhebel.v1.';
+// localStorage unter `typenhebel.v1.*`. Seit Phase 2 nur noch für Einstellungen (klein, synchron beim Start
+// gebraucht, damit das Farbschema ohne Flackern greift). Alles andere liegt in IndexedDB (db.ts).
+export const PREFIX = 'typenhebel.v1.';
 /** Schlüssel des Prototyps (Arbeitstitel „Anschlag“) */
 const LEGACY_PREFIX = 'anschlag.v1.';
 

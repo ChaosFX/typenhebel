@@ -7,8 +7,8 @@ type Count = [n: number, err: number];
 type Timing = [n: number, sumMs: number];
 
 /**
- * Laufend aggregiertes Profil im Format des Prototyps (localStorage `typenhebel.v1.profile`).
- * Wird in Phase 2 durch das versionierte Modell aus SPEC §4 ersetzt (mit Migration).
+ * Laufend aggregiertes Profil im Format des Prototyps. Liegt seit Phase 2 in IndexedDB;
+ * die Schema-Version trägt die Datenbank bzw. die Exportdatei.
  */
 export interface Profile {
   n: number;
@@ -88,6 +88,27 @@ export function mergeProfile(p: Profile | null, log: LogEvent[]): Profile {
     prev = e;
   }
   return prof;
+}
+
+/** Zwei Profile addieren (z. B. beim Import von Sessions, die lokal noch fehlen). */
+export function addProfiles(a: Profile, b: Profile): Profile {
+  const out = structuredClone(a);
+  out.n += b.n;
+  out.sessions += b.sessions;
+  out.bgN += b.bgN;
+  out.bgSum += b.bgSum;
+  const addPairs = (dst: Record<string, [number, number]>, src: Record<string, [number, number]>): void => {
+    for (const [k, [x, y]] of Object.entries(src)) {
+      const d = (dst[k] ??= [0, 0]);
+      d[0] += x;
+      d[1] += y;
+    }
+  };
+  addPairs(out.ch, b.ch);
+  addPairs(out.bg, b.bg);
+  addPairs(out.cat, b.cat);
+  for (const [k, n] of Object.entries(b.cf)) out.cf[k] = (out.cf[k] ?? 0) + n;
+  return out;
 }
 
 export function analyze(

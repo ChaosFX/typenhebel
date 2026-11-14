@@ -37,6 +37,7 @@
           <div class="ba" id="bookAuthor"></div>
         </div>
         <nav class="nav" aria-label="Abschnitte">
+          <select id="bookSel" class="chap" aria-label="Buch" title="Buch wählen" hidden></select>
           <select id="chapSel" class="chap" aria-label="Kapitel" title="Kapitel wählen" hidden></select>
           <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt">‹</button>
           <span id="secInfo"></span>
@@ -119,8 +120,16 @@
       <div class="in">
         <h2>Dein Profil</h2>
         <div id="profBody"></div>
+        <h3 style="margin-top: 1.4rem">Sichern</h3>
+        <p class="small" id="profStore"></p>
+        <label class="check"
+          ><input type="checkbox" id="profWithBooks" checked /> Bücher in die Sicherung aufnehmen</label
+        >
+        <div class="msg" id="profMsg" role="status"></div>
+        <input type="file" id="profFile" accept=".json,application/json" hidden />
         <div class="actions">
           <button id="profReset">Daten löschen</button>
+          <button id="profImport">Importieren …</button>
           <button id="profExport">Exportieren (JSON)</button>
           <button class="primary" id="profClose">Schließen</button>
         </div>

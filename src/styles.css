@@ -713,3 +713,26 @@ label.check input {
 textarea.paste:disabled {
   opacity: 0.55;
 }
+
+/* Phase 2: Buchmenü, Sicherung */
+.nav {
+  flex-wrap: wrap;
+}
+.nav select#bookSel {
+  max-width: 14rem;
+}
+.remind {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: 1rem 0 0;
+}
+button.link {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}

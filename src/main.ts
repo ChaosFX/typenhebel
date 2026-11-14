@@ -19,27 +19,35 @@ import {
   type SessionStats,
 } from './core';
 import { Sound } from './audio/sound';
+import {
+  addSession,
+  buildExport,
+  clearHistory,
+  deleteBook,
+  getSections,
+  importJson,
+  isQuotaError,
+  loadState,
+  migrateFromLocalStorage,
+  saveBook as dbSaveBook,
+  setKv,
+  TypenhebelDb,
+} from './data/db';
+import {
+  bookMeta,
+  EXPORT_REMINDER,
+  ImportError,
+  newSessionId,
+  type BookMeta,
+  type ProgressRecord,
+  type SessionRecord,
+} from './data/records';
 import { migrateLegacyKeys, store } from './data/store';
 import { EpubError, readEpub, type EpubBook } from './epub/import';
 import { attachInput } from './input/engine';
 import { DEMO } from './ui/demo';
 import { esc, fmtTime, round1 } from './ui/format';
 import { insightsHtml, sparkSvg } from './ui/insights';
-
-/** Kompakter Sitzungseintrag im Format des Prototyps. */
-interface SessionEntry {
-  d: number;
-  b: string;
-  bt: string;
-  s: number;
-  wpm: number;
-  raw: number;
-  acc: number;
-  err: number;
-  cons: number | null;
-  dur: number;
-  strict: boolean;
-}
 
 interface Settings {
   strict: boolean;
@@ -61,12 +69,14 @@ const settings: Settings = Object.assign(
   store.get<Partial<Settings>>('settings', {}),
 );
 if (!settings.theme) settings.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-let books = store.get<Book[]>('books', []);
-let profile = store.get<Profile | null>('profile', null) ?? emptyProfile();
-let sessions = store.get<SessionEntry[]>('sessions', []);
-const progress = store.get<Record<string, number>>('progress', {});
-/** Abgeschlossene Abschnitte je Buch (Indizes) */
-const done = store.get<Record<string, number[]>>('done', {});
+/** Datenbank; null, wenn IndexedDB nicht verfügbar ist (dann läuft alles nur im Speicher). */
+let db: TypenhebelDb | null = null;
+let books: BookMeta[] = [];
+let profile: Profile = emptyProfile();
+let sessions: SessionRecord[] = [];
+/** Leseposition und abgeschlossene Abschnitte je Buch */
+let progress = new Map<string, ProgressRecord>();
+let exportedAtSessions = 0;
 let book: Book = DEMO;
 let secIdx = 0;
 let sess: Session | null = null;
@@ -88,10 +98,39 @@ const el = {
   card: $('#resultCard'),
 };
 
-const allBooks = (): Book[] => [DEMO, ...books];
+const DEMO_META = bookMeta(DEMO);
+const allBooks = (): BookMeta[] => [DEMO_META, ...books];
 const saveSettings = (): boolean => store.set('settings', settings);
 const dialogOpen = (): boolean => document.querySelector('dialog[open]') !== null;
 const snd = new Sound(() => settings.sound);
+
+// ---------- Speichern ----------
+let saveWarned = false;
+/** Hinweis bei Speicherfehlern – nie still Daten verlieren. */
+function storageWarning(e: unknown): string {
+  return isQuotaError(e)
+    ? 'Der Browser-Speicher ist voll. Lösche ein Buch oder sichere deine Daten über „Profil → Exportieren“.'
+    : 'Speichern ist gerade nicht möglich. Sichere deine Daten über „Profil → Exportieren“.';
+}
+function persist(task: (d: TypenhebelDb) => Promise<unknown>): void {
+  if (!db) return;
+  task(db).catch((e: unknown) => {
+    console.error(e);
+    if (saveWarned) return;
+    saveWarned = true;
+    el.hint.textContent = storageWarning(e);
+  });
+}
+const progressOf = (id: string): ProgressRecord => progress.get(id) ?? { bookId: id, section: 0, done: [] };
+function saveProgress(id: string, change: Partial<ProgressRecord>): void {
+  const p = { ...progressOf(id), ...change };
+  progress.set(id, p);
+  persist((d) => d.progress.put(p));
+}
+/** Browser bitten, die Daten nicht automatisch zu löschen (wirkt je nach Browser still oder mit Rückfrage). */
+function requestPersistence(): void {
+  void navigator.storage?.persist?.().catch(() => false);
+}
 
 // ---------- Darstellung ----------
 function applyTheme(): void {
@@ -108,18 +147,37 @@ function applyButtons(): void {
   applyTheme();
 }
 
-function openBook(id: string, idx?: number): void {
-  book = allBooks().find((b) => b.id === id) ?? DEMO;
-  store.set('current', book.id);
-  secIdx = Math.max(0, Math.min(idx ?? 0, book.sections.length - 1));
+/** Text eines Buchs laden (Demotext ist eingebaut, alle anderen liegen in IndexedDB). */
+async function loadBook(id: string): Promise<Book | null> {
+  if (id === DEMO.id) return DEMO;
+  const meta = books.find((b) => b.id === id);
+  if (!meta || !db) return null;
+  try {
+    const sections = await getSections(db, id);
+    if (!sections?.length) return null;
+    const { sectionCount, ...rest } = meta;
+    return { ...rest, sections };
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+let openSeq = 0;
+async function openBook(id: string, idx?: number): Promise<void> {
+  const seq = ++openSeq;
+  const b = (await loadBook(id)) ?? DEMO;
+  if (seq !== openSeq) return; // inzwischen wurde ein anderes Buch gewählt
+  book = b;
+  persist((d) => setKv(d, 'current', book.id));
+  secIdx = Math.max(0, Math.min(idx ?? progressOf(book.id).section, book.sections.length - 1));
   renderSection();
 }
 
 function renderSection(): void {
   const sec = book.sections[secIdx]!;
   const s0 = (sess = new Session(sec.text, { strict: settings.strict }));
-  progress[book.id] = secIdx;
-  store.set('progress', progress);
+  if (progressOf(book.id).section !== secIdx) saveProgress(book.id, { section: secIdx });
   const breaks = new Set(sec.breaks ?? []);
   el.text.textContent = '';
   spans = [];
@@ -142,9 +200,10 @@ function renderSection(): void {
   el.text.appendChild(el.caret);
   $('#bookTitle').textContent = book.title;
   $('#bookAuthor').textContent = book.author || '';
+  renderBookNav();
   renderChapterNav();
   el.veil.hidden = true;
-  el.hint.textContent = '';
+  if (!saveWarned) el.hint.textContent = '';
   lastY = -1;
   updateCaret(true);
   updateLive();
@@ -153,14 +212,7 @@ function renderSection(): void {
 
 // ---------- Kapitel & Fortschritt ----------
 const hasChapters = (b: Book): boolean => (b.chapters?.length ?? 0) > 1;
-const doneSet = (id: string): Set<number> => new Set(done[id] ?? []);
-
-function markDone(id: string, idx: number): void {
-  const s = doneSet(id);
-  s.add(idx);
-  done[id] = [...s].sort((a, b) => a - b);
-  store.set('done', done);
-}
+const doneSet = (id: string): Set<number> => new Set(progressOf(id).done);
 
 /** Position im Kapitel bzw. im Buch: [Nummer ab 1, Anzahl] */
 function sectionPos(): [number, number] {
@@ -198,17 +250,50 @@ $<HTMLSelectElement>('#chapSel').addEventListener('change', (e) => {
   const ds = doneSet(book.id);
   let target = start;
   while (target < end && ds.has(target)) target++;
-  openBook(book.id, target < end ? target : start);
+  secIdx = target < end ? target : start;
+  renderSection();
 });
 
-function bookProgress(b: Book): string {
-  const n = doneSet(b.id).size;
+const percentDone = (b: BookMeta): number => Math.floor((doneSet(b.id).size / b.sectionCount) * 100);
+
+function bookProgress(b: BookMeta): string {
   const parts = [];
-  if (hasChapters(b)) parts.push(`${b.chapters!.length} Kapitel`);
-  parts.push(`${b.sections.length} Abschnitte`);
-  if (n) parts.push(`${Math.floor((n / b.sections.length) * 100)} % geschafft`);
+  if ((b.chapters?.length ?? 0) > 1) parts.push(`${b.chapters!.length} Kapitel`);
+  parts.push(`${b.sectionCount} Abschnitte`);
+  if (doneSet(b.id).size) parts.push(`${percentDone(b)} % geschafft`);
   return parts.join(' · ');
 }
+
+// ---------- Buchmenü ----------
+/** Auswahl zwischen den Büchern; erscheint, sobald mehr als der Demotext geladen ist. */
+function renderBookNav(): void {
+  const sel = $<HTMLSelectElement>('#bookSel');
+  if (!books.length) {
+    sel.hidden = true;
+    sel.innerHTML = '';
+    return;
+  }
+  sel.innerHTML =
+    allBooks()
+      .map((b) => {
+        const pct = doneSet(b.id).size ? ` · ${percentDone(b)} %` : '';
+        return `<option value="${esc(b.id)}">${esc(b.title)}${pct}</option>`;
+      })
+      .join('') + '<option value="" disabled>──────────</option><option value=":load">Text laden …</option>';
+  sel.value = book.id;
+  sel.hidden = false;
+}
+
+$<HTMLSelectElement>('#bookSel').addEventListener('change', (e) => {
+  const sel = e.target as HTMLSelectElement;
+  const id = sel.value;
+  if (id === ':load') {
+    sel.value = book.id;
+    openLoadDialog();
+    return;
+  }
+  void openBook(id);
+});
 
 function paint(i: number): void {
   const s = spans[i];
@@ -342,30 +427,29 @@ setInterval(() => {
 function finish(): void {
   const s = sess!;
   const st = s.stats();
-  const prevBest = sessions.reduce((m, x) => Math.max(m, x.wpm), 0);
+  const prevBest = sessions.reduce((m, x) => Math.max(m, x.stats.wpm), 0);
   const first = sessions.length === 0;
-  sessions.push({
-    d: Date.now(),
-    b: book.id,
-    bt: book.title,
-    s: secIdx,
-    wpm: round1(st.wpm),
-    raw: round1(st.raw),
-    acc: round1(st.accuracy * 100),
-    err: st.errors,
-    cons: st.consistency === null ? null : round1(st.consistency),
-    dur: Math.round(st.durationMs),
+  const now = Date.now();
+  const rec: SessionRecord = {
+    id: newSessionId(now),
+    date: now,
+    bookId: book.id,
+    bookTitle: book.title,
+    section: secIdx,
     strict: settings.strict,
-  });
-  if (sessions.length > 200) sessions = sessions.slice(-200);
+    stats: st,
+    events: s.log,
+  };
+  sessions.push(rec);
   profile = mergeProfile(profile, s.log);
   profile.sessions++;
-  store.set('sessions', sessions);
-  store.set('profile', profile);
-  markDone(book.id, secIdx);
+  const snapshot = structuredClone(profile);
+  persist((d) => addSession(d, rec, snapshot));
+  const ds = doneSet(book.id);
+  ds.add(secIdx);
+  saveProgress(book.id, { section: (secIdx + 1) % book.sections.length, done: [...ds].sort((a, b) => a - b) });
   renderChapterNav();
-  progress[book.id] = (secIdx + 1) % book.sections.length;
-  store.set('progress', progress);
+  renderBookNav();
   snd.play('done');
   showResult(st, { newBest: !first && st.wpm > prevBest, perfect: st.errors === 0 });
 }
@@ -391,6 +475,7 @@ function showResult(st: SessionStats, { newBest, perfect }: { newBest: boolean; 
     ${sparkSvg(series(sess!.log))}
     <h3>Auffälligkeiten aus deinem Profil (${profile.sessions} ${profile.sessions === 1 ? 'Abschnitt' : 'Abschnitte'})</h3>
     ${insightsHtml(a)}
+    ${exportDue() ? `<p class="remind" id="resRemind">Seit deiner letzten Sicherung hast du ${sessions.length - exportedAtSessions} Abschnitte geübt. Browserdaten können verloren gehen – <button class="link" id="resExport">jetzt sichern</button>.</p>` : ''}
     <div class="actions"><button id="resAgain">Nochmal</button><button class="primary" id="resNext">Weiter ↵</button></div>`;
   el.veil.hidden = false;
   $('#resAgain').onclick = () => {
@@ -398,6 +483,10 @@ function showResult(st: SessionStats, { newBest, perfect }: { newBest: boolean; 
     renderSection();
   };
   $('#resNext').onclick = () => go(1);
+  document.querySelector<HTMLButtonElement>('#resExport')?.addEventListener('click', () => {
+    void exportData(true).then(() => $('#resRemind').remove());
+    $('#resNext').focus();
+  });
   $('#resNext').focus();
 }
 
@@ -438,7 +527,8 @@ const ldText = $<HTMLTextAreaElement>('#ldText');
 const ldMsg = $('#ldMsg');
 
 function renderBookList(): void {
-  $('#bookList').innerHTML = allBooks()
+  const list = $('#bookList');
+  list.innerHTML = allBooks()
     .map(
       (b) =>
         `<li><span>${esc(b.title)}${b.author && b.id !== 'demo' ? ' <small>– ' + esc(b.author) + '</small>' : ''}<br><small>${bookProgress(b)}</small></span>
@@ -491,22 +581,36 @@ function loadError(text: string): void {
   ldMsg.textContent = text;
 }
 
-/** Buch speichern und öffnen; false, wenn der Speicher voll ist. */
-function saveBook(b: Book): boolean {
-  books.push(b);
-  if (store.set('books', books)) return true;
-  books.pop();
-  loadError(
-    'Der Browser-Speicher ist voll (ca. 5 MB). Lösche einen anderen Text, um Platz zu schaffen. Ein Buch braucht etwa 1–2 MB.',
-  );
-  return false;
+/** Buch speichern; false, wenn das nicht ging (Meldung steht dann im Dialog). */
+async function saveBook(b: Book): Promise<boolean> {
+  if (!db) {
+    loadError(
+      'Dieser Browser erlaubt keine dauerhafte Speicherung (IndexedDB). Der Text kann nicht gespeichert werden.',
+    );
+    return false;
+  }
+  try {
+    await dbSaveBook(db, b);
+  } catch (e) {
+    console.error(e);
+    loadError(
+      isQuotaError(e)
+        ? 'Der Browser-Speicher ist voll. Lösche einen anderen Text, um Platz zu schaffen.'
+        : 'Der Text konnte nicht gespeichert werden.',
+    );
+    return false;
+  }
+  books.push(bookMeta(b));
+  requestPersistence();
+  return true;
 }
 
-$('#loadBtn').onclick = () => {
+function openLoadDialog(): void {
   ldMsg.textContent = '';
   renderBookList();
   loadDlg.showModal();
-};
+}
+$('#loadBtn').onclick = openLoadDialog;
 $('#ldClose').onclick = () => loadDlg.close();
 loadDlg.addEventListener('close', () => focusInput());
 $('#bookList').addEventListener('click', (e) => {
@@ -515,19 +619,23 @@ $('#bookList').addEventListener('click', (e) => {
   const d = ds.del;
   if (o) {
     loadDlg.close();
-    openBook(o, progress[o] ?? 0);
+    void openBook(o);
   }
-  if (d && confirm('Diesen Text wirklich löschen?')) {
-    books = books.filter((b) => b.id !== d);
-    store.set('books', books);
-    /* eslint-disable @typescript-eslint/no-dynamic-delete -- Wörterbücher nach Buch-ID */
-    delete progress[d];
-    delete done[d];
-    /* eslint-enable @typescript-eslint/no-dynamic-delete */
-    store.set('progress', progress);
-    store.set('done', done);
-    if (book.id === d) openBook('demo', 0);
-    renderBookList();
+  if (d && confirm('Diesen Text wirklich löschen? Der Fortschritt darin geht verloren, dein Profil bleibt.')) {
+    const del = db ? deleteBook(db, d) : Promise.resolve();
+    del.then(
+      () => {
+        books = books.filter((b) => b.id !== d);
+        progress.delete(d);
+        if (book.id === d) void openBook(DEMO.id, 0);
+        else renderBookNav();
+        renderBookList();
+      },
+      (e: unknown) => {
+        console.error(e);
+        loadError('Der Text konnte nicht gelöscht werden.');
+      },
+    );
   }
 });
 
@@ -579,7 +687,7 @@ ldText.addEventListener('input', () => {
   }, 300);
 });
 
-$('#ldGo').onclick = () => {
+$('#ldGo').onclick = async () => {
   ldMsg.className = 'msg';
   clearTimeout(rareTimer);
   if (!pendingEpub) showRare(prepare(ldText.value).paragraphs);
@@ -621,63 +729,167 @@ $('#ldGo').onclick = () => {
     };
     words = paras.reduce((a, x) => a + wc(x), 0);
   }
-  if (!saveBook(b)) return;
+  const go = $<HTMLButtonElement>('#ldGo');
+  go.disabled = true;
+  const ok = await saveBook(b).finally(() => (go.disabled = false));
+  if (!ok) return;
   const chapters = b.chapters ? `${b.chapters.length} Kapitel, ` : '';
   const m = `${chapters}${b.sections.length} Abschnitte, ${words.toLocaleString('de-DE')} Wörter geladen.`;
   resetLoadForm();
   renderBookList();
   ldMsg.textContent = m;
   loadDlg.close();
-  openBook(b.id, 0);
+  void openBook(b.id, 0);
 };
 
-// ---------- Profil ----------
+// ---------- Profil, Sichern, Wiederherstellen ----------
+const exportDue = (): boolean => sessions.length - exportedAtSessions >= EXPORT_REMINDER;
+const profMsg = $('#profMsg');
+
 function renderProfile(): void {
   const a = analyze(profile);
   const last = sessions.slice(-10).reverse();
-  let h = `<p class="small">${profile.sessions} ${profile.sessions === 1 ? 'Abschnitt' : 'Abschnitte'} · ${profile.n} Anschläge ausgewertet. Die Daten liegen nur in diesem Browser.</p>`;
+  let h = `<p class="small">${profile.sessions} ${profile.sessions === 1 ? 'Abschnitt' : 'Abschnitte'} · ${profile.n} Anschläge ausgewertet.</p>`;
   h += insightsHtml(a);
   h += '<h3 style="margin-top:1.4rem">Letzte Abschnitte</h3>';
   h += last.length
     ? `<table><thead><tr><th>Datum</th><th>Text</th><th>WPM</th><th>Genauigkeit</th><th>Gleichm.</th></tr></thead><tbody>${last
         .map(
           (s) =>
-            `<tr><td>${new Date(s.d).toLocaleDateString('de-AT')}</td><td>${esc(s.bt)} · ${s.s + 1}</td><td>${s.wpm}</td><td>${String(s.acc).replace('.', ',')} %</td><td>${s.cons === null ? '–' : Math.round(s.cons) + ' %'}</td></tr>`,
+            `<tr><td>${new Date(s.date).toLocaleDateString('de-AT')}</td><td>${esc(s.bookTitle)} · ${s.section + 1}</td><td>${round1(s.stats.wpm)}</td><td>${String(round1(s.stats.accuracy * 100)).replace('.', ',')} %</td><td>${s.stats.consistency === null ? '–' : Math.round(s.stats.consistency) + ' %'}</td></tr>`,
         )
         .join('')}</tbody></table>`
     : '<p class="empty">Noch keine Abschnitte abgeschlossen.</p>';
   $('#profBody').innerHTML = h;
+  const since = sessions.length - exportedAtSessions;
+  $('#profStore').textContent =
+    (db
+      ? 'Profil, Verlauf und Bücher liegen nur in diesem Browser. Wenn Browserdaten gelöscht werden, sind sie weg – sichere sie deshalb ab und zu als Datei.'
+      : 'Dieser Browser erlaubt keine dauerhafte Speicherung: Nach dem Schließen ist alles weg. Sichere deine Daten als Datei.') +
+    (since > 0 ? ` Seit der letzten Sicherung: ${since} ${since === 1 ? 'Abschnitt' : 'Abschnitte'}.` : '');
 }
+
+function profileMessage(text: string, err = false): void {
+  profMsg.className = err ? 'msg err' : 'msg';
+  profMsg.textContent = text;
+}
+
+async function exportData(withBooks: boolean): Promise<void> {
+  const data = db
+    ? await buildExport(db, withBooks)
+    : {
+        app: 'typenhebel',
+        schema: 2,
+        exported: new Date().toISOString(),
+        profile,
+        sessions,
+        progress: [...progress.values()],
+      };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `typenhebel-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  exportedAtSessions = sessions.length;
+  persist((d) => setKv(d, 'exportedAtSessions', exportedAtSessions));
+  requestPersistence();
+}
+
+/** Beim Start und nach einem Import: alles aus der Datenbank lesen. Gibt das zuletzt geöffnete Buch zurück. */
+async function reloadState(): Promise<string | null> {
+  if (!db) return null;
+  const st = await loadState(db);
+  books = st.books;
+  sessions = st.sessions;
+  progress = st.progress;
+  profile = st.profile;
+  exportedAtSessions = st.exportedAtSessions;
+  return st.current;
+}
+
 $('#profBtn').onclick = () => {
+  profMsg.textContent = '';
   renderProfile();
   profDlg.showModal();
 };
 $('#profClose').onclick = () => profDlg.close();
 profDlg.addEventListener('close', () => focusInput());
 $('#profExport').onclick = () => {
-  const blob = new Blob(
-    [JSON.stringify({ version: 1, exported: new Date().toISOString(), sessions, profile }, null, 1)],
-    {
-      type: 'application/json',
+  exportData($<HTMLInputElement>('#profWithBooks').checked).then(
+    () => {
+      profileMessage('Sicherung gespeichert.');
+      renderProfile();
+    },
+    (e: unknown) => {
+      console.error(e);
+      profileMessage('Die Sicherung konnte nicht erstellt werden.', true);
     },
   );
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'typenhebel-daten.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
-$('#profReset').onclick = () => {
+$('#profImport').onclick = () => $<HTMLInputElement>('#profFile').click();
+$<HTMLInputElement>('#profFile').addEventListener('change', async (e) => {
+  const input = e.target as HTMLInputElement;
+  const f = input.files?.[0];
+  input.value = '';
+  if (!f) return;
+  if (!db) return profileMessage('Ohne dauerhafte Speicherung ist kein Import möglich.', true);
+  try {
+    const r = await importJson(db, await f.text());
+    await reloadState();
+    const parts = [`${r.sessions.length} ${r.sessions.length === 1 ? 'Abschnitt' : 'Abschnitte'} übernommen`];
+    if (r.books.length) parts.push(`${r.books.length} ${r.books.length === 1 ? 'Buch' : 'Bücher'}`);
+    if (r.duplicates) parts.push(`${r.duplicates} schon vorhanden`);
+    let m = parts.join(', ') + '.';
+    if (r.unprofiled) m += ` ${r.unprofiled} ältere Abschnitte ohne Rohdaten fließen nicht ins Profil ein.`;
+    profileMessage(m);
+    renderProfile();
+    renderBookNav();
+    renderChapterNav();
+  } catch (err) {
+    console.error(err);
+    if (err instanceof ImportError) profileMessage(err.message, true);
+    else profileMessage(isQuotaError(err) ? storageWarning(err) : 'Die Datei konnte nicht importiert werden.', true);
+  }
+});
+$('#profReset').onclick = async () => {
   if (!confirm('Profil und Verlauf wirklich löschen? Deine geladenen Texte bleiben erhalten.')) return;
-  sessions = [];
-  profile = emptyProfile();
-  store.del('sessions');
-  store.del('profile');
-  renderProfile();
+  try {
+    if (db) await clearHistory(db);
+    sessions = [];
+    profile = emptyProfile();
+    exportedAtSessions = 0;
+    renderProfile();
+  } catch (e) {
+    console.error(e);
+    profileMessage('Löschen ist fehlgeschlagen.', true);
+  }
 };
 
 // ---------- Start ----------
-applyButtons();
-const cur = store.get('current', 'demo');
-openBook(cur, progress[cur] ?? 0);
-if (!document.hasFocus()) el.mask.hidden = false;
+async function start(): Promise<void> {
+  applyButtons();
+  let current: string | null = null;
+  try {
+    db = new TypenhebelDb();
+    await db.open();
+    try {
+      await migrateFromLocalStorage(db, localStorage);
+    } catch (e) {
+      // Alte Daten bleiben in localStorage und werden beim nächsten Start erneut übernommen.
+      console.error(e);
+      el.hint.textContent = storageWarning(e);
+      saveWarned = true;
+    }
+    current = await reloadState();
+  } catch (e) {
+    console.error(e);
+    db = null;
+    el.hint.textContent =
+      'Dieser Browser erlaubt keine dauerhafte Speicherung (IndexedDB). Fortschritt und Profil gehen beim Schließen verloren.';
+    saveWarned = true;
+  }
+  await openBook(current ?? DEMO.id);
+  if (!document.hasFocus()) el.mask.hidden = false;
+}
+void start();
