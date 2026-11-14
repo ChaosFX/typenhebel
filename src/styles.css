@@ -953,3 +953,109 @@ dialog.wide {
     transform: none;
   }
 }
+
+/* Mitgelieferte Bücher */
+.shelf-h {
+  margin: 2.4rem 0 1.2rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.95rem;
+}
+#libMsg:empty {
+  display: none;
+}
+.shelf-meta small.src {
+  font-size: 0.7rem;
+  color: var(--dim);
+}
+.avail .cover svg {
+  filter: saturate(0.75);
+  opacity: 0.9;
+  transition:
+    opacity 0.2s,
+    filter 0.2s;
+}
+.avail .cover:hover svg,
+.avail .cover:focus-visible svg {
+  filter: none;
+  opacity: 1;
+}
+.cover .get {
+  position: absolute;
+  left: 50%;
+  bottom: 0.9rem;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.cover:hover .get,
+.cover:focus-visible .get,
+.avail.busy .get {
+  opacity: 1;
+}
+.avail.busy .cover {
+  cursor: progress;
+}
+
+/* Hauptmenü in der Logo-Zeile: Bibliothek, Text laden, Profil */
+.brand {
+  flex-wrap: wrap;
+}
+.mainnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.mainnav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.05rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: var(--card);
+  border-color: color-mix(in srgb, var(--ink) 14%, transparent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.mainnav button:hover {
+  background: var(--paper);
+  border-color: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+.mainnav svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mainnav button.lib {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  font-weight: 600;
+}
+.mainnav button.lib:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 640px) {
+  .mainnav {
+    margin-left: 0;
+    width: 100%;
+  }
+  .mainnav button {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.6rem;
+  }
+}
