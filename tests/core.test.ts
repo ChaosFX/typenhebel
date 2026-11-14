@@ -24,7 +24,7 @@ describe('core', () => {
   });
 
   test('prepare: NFC (ä als ein Zeichen)', () => {
-    const p = Core.prepare('Schönes Wetter heute, ähnlich wie gestern und vorgestern auch schon.');
+    const p = Core.prepare('Scho\u0308nes Wetter heute, a\u0308hnlich wie gestern und vorgestern auch schon.');
     expect(p.paragraphs[0]).toContain('ä');
     expect(p.paragraphs[0]).toContain('ö');
     expect(Array.from('ä').length).toBe(1);
