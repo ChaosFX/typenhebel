@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Anschlag – Literatur abtippen</title>
+<style>
+:root{
+  --serif:'Literata','Source Serif 4','Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --bg:#efe9dc; --paper:#faf6ee; --ink:#2a2420; --dim:#9b907f; --muted:#7d725f;
+  --accent:#9b3d2a; --glow:rgba(155,61,42,.35); --bad:#b8352a; --bad-bg:rgba(184,53,42,.13);
+  --line:rgba(42,36,32,.12); --card:#fffdf8;
+  --shadow:0 1px 0 rgba(255,255,255,.7) inset,0 40px 80px -40px rgba(70,45,20,.35),0 2px 6px rgba(70,45,20,.08);
+  --fs:clamp(1.18rem,1rem + .85vw,1.6rem);
+}
+[data-theme=dark]{
+  --bg:#141210; --paper:#1d1a16; --ink:#ece1cd; --dim:#6f6657; --muted:#9a9081;
+  --accent:#e2a65a; --glow:rgba(226,166,90,.45); --bad:#f0705f; --bad-bg:rgba(240,112,95,.17);
+  --line:rgba(236,225,205,.1); --card:#25211c;
+  --shadow:0 1px 0 rgba(255,255,255,.03) inset,0 40px 80px -40px rgba(0,0,0,.8),0 2px 6px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%,color-mix(in srgb,var(--paper) 70%,transparent),transparent 70%),var(--bg);
+  color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;transition:background .4s,color .4s;
+}
+.app{max-width:62rem;margin:0 auto;padding:1.2rem 1.2rem 4rem}
+button{font:inherit;color:inherit;background:none;border:1px solid var(--line);border-radius:999px;padding:.38rem .85rem;cursor:pointer;font-size:.82rem;letter-spacing:.02em;transition:background .15s,border-color .15s,transform .1s}
+button:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+button:active{transform:translateY(1px)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+[data-theme=dark] button.primary{color:#1b140b}
+button.primary:hover{filter:brightness(1.08);background:var(--accent)}
+
+.top{display:flex;flex-wrap:wrap;gap:.8rem 1.4rem;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.bt{font-family:var(--serif);font-size:1.15rem;font-weight:600;letter-spacing:.01em}
+.ba{font-size:.78rem;color:var(--muted);margin-top:.1rem;max-width:34rem}
+.nav{display:flex;align-items:center;gap:.5rem;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.nav button{padding:.25rem .7rem}
+.tools{display:flex;gap:.4rem;flex-wrap:wrap}
+
+.bar{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:.7rem}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width .25s ease}
+.live{display:flex;gap:1.6rem;flex-wrap:wrap;font-size:.8rem;color:var(--muted);letter-spacing:.04em;margin:0 .3rem .9rem;font-variant-numeric:tabular-nums;opacity:.85}
+.live b{color:var(--ink);font-weight:600;margin-left:.25rem}
+#lStreak.glow{animation:streak .7s ease-out}
+
+.sheet{position:relative;background:var(--paper);border-radius:16px;box-shadow:var(--shadow);padding:clamp(1.6rem,4vw,3.4rem) clamp(1.3rem,5vw,4rem);border:1px solid var(--line);transition:background .4s}
+.text{position:relative;font-family:var(--serif);font-size:var(--fs);line-height:1.85;color:var(--dim);white-space:pre-wrap;overflow-wrap:break-word;user-select:none;cursor:text;font-kerning:normal;font-variant-ligatures:none}
+.pbk{height:.9em}
+.c{transition:color .14s ease}
+.c.ok{color:var(--ink)}
+.c.bad{color:var(--bad);background:var(--bad-bg);border-radius:3px;box-shadow:inset 0 -2px 0 var(--bad)}
+.c.pop{animation:pop .45s ease-out}
+.c.flash{animation:flash .3s ease-out}
+.caret{position:absolute;left:0;top:0;width:2px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px var(--glow);pointer-events:none;transition:transform .09s cubic-bezier(.2,.8,.3,1);animation:breathe 1.6s ease-in-out infinite}
+.caret.err{animation:shake .25s}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes pop{0%{color:var(--accent);text-shadow:0 0 16px var(--glow)}100%{color:var(--ink);text-shadow:0 0 0 transparent}}
+@keyframes flash{0%{background:var(--bad-bg);box-shadow:inset 0 -2px 0 var(--bad)}100%{background:transparent;box-shadow:inset 0 -2px 0 transparent}}
+@keyframes shake{0%,100%{margin-left:0}25%{margin-left:-3px}75%{margin-left:3px}}
+@keyframes streak{0%{color:var(--accent);transform:scale(1.35)}100%{transform:scale(1)}}
+#lStreak{display:inline-block}
+
+.mask{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--paper) 78%,transparent);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);color:var(--muted);font-size:.95rem;letter-spacing:.03em;cursor:pointer;z-index:3}
+.mask[hidden]{display:none}
+.hint{min-height:1.4em;margin:.8rem .3rem 0;font-size:.8rem;color:var(--muted)}
+.foot{margin:1.4rem .3rem 0;font-size:.78rem;color:var(--muted);display:flex;gap:1.2rem;flex-wrap:wrap}
+kbd{font-family:var(--sans);font-size:.72rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:.05rem .4rem;background:var(--card)}
+
+.veil{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:5vh 1rem}
+.veil[hidden]{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:clamp(1.3rem,3vw,2.2rem);width:min(46rem,100%);animation:rise .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.card h2{font-family:var(--serif);font-weight:600;font-size:1.5rem;margin:0 0 .15rem}
+.card .sub{color:var(--muted);font-size:.85rem;margin-bottom:1.3rem}
+.badges{display:flex;gap:.5rem;flex-wrap:wrap;margin:-.6rem 0 1.1rem}
+.badge{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:.12rem .6rem}
+.big{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem}
+.big div{border:1px solid var(--line);border-radius:12px;padding:.8rem .9rem}
+.big b{display:block;font-family:var(--serif);font-size:1.9rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.big span{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.small{font-size:.82rem;color:var(--muted);margin-bottom:1rem}
+.spark{width:100%;height:70px;display:block;margin:.2rem 0 1.2rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem 1.6rem}
+.cols h3,.card h3{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 .5rem;font-weight:600}
+.list{margin:0;padding:0;list-style:none;font-size:.88rem}
+.list li{display:flex;justify-content:space-between;gap:1rem;padding:.28rem 0;border-bottom:1px dashed var(--line)}
+.list li span:last-child{color:var(--muted);font-variant-numeric:tabular-nums}
+.mono{font-family:var(--serif);font-weight:600}
+.cat{display:grid;grid-template-columns:8.5rem 1fr 3rem;gap:.6rem;align-items:center;font-size:.85rem;margin:.28rem 0}
+.meter{height:6px;border-radius:6px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.tip{margin:1.1rem 0 0;padding:.8rem 1rem;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);border-radius:0 10px 10px 0;font-size:.88rem;line-height:1.5}
+.empty{color:var(--muted);font-size:.85rem}
+.note{text-transform:none;letter-spacing:0;font-weight:400;font-size:.75rem}
+.actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.5rem;flex-wrap:wrap}
+
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);padding:0;box-shadow:var(--shadow);width:min(44rem,calc(100% - 2rem));max-height:90vh}
+dialog::backdrop{background:rgba(10,8,6,.5);backdrop-filter:blur(3px)}
+dialog .in{padding:clamp(1.2rem,3vw,2rem)}
+dialog h2{font-family:var(--serif);margin:0 0 1rem;font-size:1.35rem}
+label{display:block;font-size:.78rem;letter-spacing:.05em;color:var(--muted);margin:.8rem 0 .25rem}
+input[type=text],textarea.paste{width:100%;font:inherit;font-size:.92rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem}
+textarea.paste{min-height:12rem;resize:vertical;font-family:var(--serif);line-height:1.5}
+.msg{font-size:.85rem;margin-top:.7rem;min-height:1.2em}
+.msg.err{color:var(--bad)}
+.books{list-style:none;padding:0;margin:.4rem 0 0}
+.books li{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.45rem 0;border-bottom:1px dashed var(--line);font-size:.9rem}
+.books li small{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.82rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:.3rem .4rem;border-bottom:1px dashed var(--line)}
+th{font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+#inp{position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;resize:none}
+@media (max-width:640px){.big{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.cat{grid-template-columns:7rem 1fr 2.8rem}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="book">
+      <div class="bt" id="bookTitle"></div>
+      <div class="ba" id="bookAuthor"></div>
+    </div>
+    <nav class="nav" aria-label="Abschnitte">
+      <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt">‹</button>
+      <span id="secInfo"></span>
+      <button id="next" title="Nächster Abschnitt" aria-label="Nächster Abschnitt">›</button>
+    </nav>
+    <div class="tools">
+      <button id="modeBtn"></button>
+      <button id="soundBtn"></button>
+      <button id="themeBtn"></button>
+      <button id="loadBtn">Text laden</button>
+      <button id="profBtn">Profil</button>
+    </div>
+  </header>
+
+  <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+  <div class="live" aria-hidden="true">
+    <span>Tempo<b id="lWpm">0</b></span>
+    <span>Genauigkeit<b id="lAcc">100 %</b></span>
+    <span>Serie<b id="lStreak">0</b></span>
+    <span>Zeit<b id="lTime">0:00</b></span>
+  </div>
+
+  <main class="sheet" id="sheet">
+    <div class="text" id="text" aria-label="Abzutippender Text"></div>
+    <div class="mask" id="mask" hidden>Klicke hierher, um weiterzutippen</div>
+  </main>
+  <div class="hint" id="hint" role="status"></div>
+  <div class="foot">
+    <span><kbd>Esc</kbd> Abschnitt neu starten</span>
+    <span><kbd>⌫</kbd> korrigieren (nur im Modus „Frei“)</span>
+    <span><kbd>↵</kbd> weiter nach dem Abschnitt</span>
+  </div>
+</div>
+
+<textarea id="inp" aria-label="Eingabefeld zum Abtippen" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+
+<div class="veil" id="resultVeil" hidden>
+  <div class="card" id="resultCard" role="dialog" aria-modal="true" aria-labelledby="resTitle"></div>
+</div>
+
+<dialog id="loadDlg">
+  <div class="in">
+    <h2>Text laden</h2>
+    <p class="small">Öffne auf <b>projekt-gutenberg.org</b> ein Kapitel, markiere den Text, kopiere ihn und füge ihn hier ein – oder lade eine <code>.txt</code>-Datei. Überschriften, Seitenzahlen und Fußnotenmarker werden entfernt, der Text wird in Abschnitte geteilt. Alles bleibt in deinem Browser.</p>
+    <label for="ldTitle">Titel</label><input type="text" id="ldTitle" placeholder="z. B. Die Welt von Gestern – Vorwort">
+    <label for="ldAuthor">Autor</label><input type="text" id="ldAuthor" placeholder="z. B. Stefan Zweig">
+    <label for="ldFile">Datei (.txt)</label><input type="file" id="ldFile" accept=".txt,text/plain">
+    <label for="ldText">… oder Text einfügen</label><textarea class="paste" id="ldText" spellcheck="false"></textarea>
+    <div class="msg" id="ldMsg"></div>
+    <h3 style="margin-top:1.2rem">Meine Texte</h3>
+    <ul class="books" id="bookList"></ul>
+    <div class="actions"><button id="ldClose">Schließen</button><button class="primary" id="ldGo">Laden</button></div>
+  </div>
+</dialog>
+
+<dialog id="profDlg">
+  <div class="in">
+    <h2>Dein Profil</h2>
+    <div id="profBody"></div>
+    <div class="actions">
+      <button id="profReset">Daten löschen</button>
+      <button id="profExport">Exportieren (JSON)</button>
+      <button class="primary" id="profClose">Schließen</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+// <core>
+const Core=(()=>{
+  const IDLE_CAP=3000;       // Pausen über 3 s zählen nicht als Tippzeit
+  const QD=new Set(['„','“','”','»','«','‟','"']);
+  const QS=new Set(['‚','‘','’','›','‹',"'"]);
+  const DA=new Set(['–','—','‐','‑','−','-']);
+
+  // Ein getipptes Zeichen passt, wenn es exakt stimmt oder eine einfache Tastatur-Entsprechung ist.
+  function matches(exp,got){
+    if(exp===got) return true;
+    if(QD.has(exp)&&got==='"') return true;
+    if(QS.has(exp)&&got==="'") return true;
+    if(DA.has(exp)&&got==='-') return true;
+    return false;
+  }
+  const wc=s=>{const t=s.trim();return t?t.split(/\s+/).length:0};
+
+  function prepare(raw){
+    let s=String(raw).replace(/\r\n?/g,'\n').normalize('NFC');
+    s=s.replace(/[    ]/g,' ').replace(/[​-‍⁠﻿­]/g,'')
+       .replace(/ſ/g,'s').replace(/…/g,'...').replace(/\t/g,' ').replace(/\[\d{1,3}\]/g,'');
+    let blocks=s.split(/\n\s*\n/);
+    if(blocks.length<3&&s.split('\n').length>6) blocks=s.split('\n');
+    const paragraphs=[],headings=[];
+    for(let b of blocks){
+      b=b.replace(/\s*\n\s*/g,' ').replace(/ {2,}/g,' ').trim();
+      if(!b) continue;
+      if(/^[-–—]?\s*\d{1,4}\s*[-–—]?$/.test(b)) continue;                 // Seitenzahl
+      if(b.split(' ').length<=6&&!/[.!?…:,;"“”«»]$/.test(b)){headings.push(b);continue;} // Überschrift
+      paragraphs.push(b);
+    }
+    const rare=[...new Set(paragraphs.join('').match(/[^\p{L}\p{N}\s.,;:!?'"„“”‚‘’»«›‹()\[\]\-–—\/&%§€$@*+=_]/gu)||[])];
+    return {paragraphs,headings,rare};
+  }
+
+  function segment(paras,{min=90,max=200}={}){
+    const units=[];
+    for(const p of paras){
+      if(wc(p)<=max){units.push({t:p,end:true});continue}
+      const sents=p.split(/(?<=[.!?]["“”»«’']?)\s+(?=[„"»«(A-ZÄÖÜ0-9])/u);
+      sents.forEach((t,i)=>units.push({t,end:i===sents.length-1}));
+    }
+    const out=[];let cur=[],words=0;
+    const flush=()=>{
+      if(!cur.length) return;
+      const chars=[],breaks=[];
+      cur.forEach((u,k)=>{
+        if(k>0){ if(cur[k-1].end) breaks.push(chars.length); chars.push(' '); }
+        chars.push(...Array.from(u.t));
+      });
+      out.push({text:chars.join(''),breaks});
+      cur=[];words=0;
+    };
+    for(const u of units){
+      const uw=wc(u.t);
+      if(words>0&&words+uw>max) flush();
+      cur.push(u);words+=uw;
+      if(u.end&&words>=min) flush();
+    }
+    flush();
+    if(out.length>1){
+      const last=out[out.length-1];
+      if(wc(last.text)<min/2){
+        const prev=out[out.length-2],off=Array.from(prev.text).length+1;
+        prev.text+=' '+last.text;
+        prev.breaks.push(...last.breaks.map(b=>b+off));
+        out.pop();
+      }
+    }
+    return out;
+  }
+
+  function charClass(c){
+    if(c===' ') return 'Leerzeichen';
+    if(/[äöüß]/.test(c)||/[ÄÖÜ]/.test(c)) return 'Umlaute & ß';
+    if(/\p{Lu}/u.test(c)) return 'Großbuchstaben';
+    if(/\p{Ll}/u.test(c)) return 'Kleinbuchstaben';
+    if(/\p{N}/u.test(c)) return 'Ziffern';
+    return 'Satzzeichen';
+  }
+  const lc=c=>c.toLowerCase();
+
+  class Session{
+    constructor(text,{strict=true}={}){
+      this.chars=Array.from(text);this.strict=strict;
+      this.pos=0;this.typed=[];this.log=[];
+      this.start=null;this.lastT=null;this.at=0;
+      this.pausedAt=null;this.pauseTotal=0;
+      this.streak=0;this.best=0;this.done=false;
+    }
+    get cursor(){return this.strict?this.pos:this.typed.length}
+    stateAt(i){
+      if(this.strict) return i<this.pos?'ok':'';
+      const x=this.typed[i];return x?(x.ok?'ok':'bad'):'';
+    }
+    correctCount(){return this.strict?this.pos:this.typed.filter(x=>x.ok).length}
+    _stamp(t){
+      if(this.start===null) this.start=t;
+      const dt=this.lastT===null?null:t-this.lastT;
+      if(dt!==null) this.at+=Math.min(dt,IDLE_CAP);
+      this.lastT=t;
+      return {dt,wall:t-this.start-this.pauseTotal};
+    }
+    type(got,t){
+      if(this.done||this.pausedAt!==null) return null;
+      const i=this.cursor;
+      if(i>=this.chars.length) return null;
+      const exp=this.chars[i],ok=matches(exp,got);
+      const {dt,wall}=this._stamp(t);
+      this.log.push({kind:'k',i,exp,got,ok,t:wall,at:this.at,dt});
+      if(ok){this.streak++;this.best=Math.max(this.best,this.streak)}else this.streak=0;
+      if(this.strict){ if(ok) this.pos++; }
+      else this.typed.push({got,ok});
+      this.done=this.strict?this.pos>=this.chars.length
+                           :(this.typed.length===this.chars.length&&this.typed.every(x=>x.ok));
+      return {i,ok,exp};
+    }
+    backspace(t){
+      if(this.strict||this.done||this.pausedAt!==null||!this.typed.length) return null;
+      const {dt,wall}=this._stamp(t);
+      const i=this.typed.length-1;
+      this.typed.pop();
+      this.log.push({kind:'b',i,t:wall,at:this.at,dt});
+      return {i};
+    }
+    pause(t){ if(this.start===null||this.done||this.pausedAt!==null) return; this.pausedAt=t; }
+    resume(t){ if(this.pausedAt===null) return; this.pauseTotal+=t-this.pausedAt; this.pausedAt=null; this.lastT=null; }
+    stats(){
+      const keys=this.log.filter(e=>e.kind==='k');
+      const total=keys.length,good=keys.filter(e=>e.ok).length;
+      const backspaces=this.log.length-total;
+      const at=this.log.length?this.log[this.log.length-1].at:0;
+      const minutes=Math.max(at,1000)/60000;
+      const dts=keys.filter(e=>e.dt!==null&&e.dt<IDLE_CAP).map(e=>e.dt);
+      let consistency=null;
+      if(dts.length>5){
+        const m=dts.reduce((a,b)=>a+b,0)/dts.length;
+        const sd=Math.sqrt(dts.reduce((a,b)=>a+(b-m)*(b-m),0)/dts.length);
+        const cv=m>0?sd/m:0;
+        consistency=Math.max(0,100*(1-Math.tanh(cv+Math.pow(cv,3)/3+Math.pow(cv,5)/5)));
+      }
+      return {total,good,errors:total-good,backspaces,
+        accuracy:total?good/total:1,
+        wpm:this.correctCount()/5/minutes,raw:total/5/minutes,
+        consistency,durationMs:at,chars:this.chars.length,bestStreak:this.best};
+    }
+  }
+
+  function series(log,win=20,step=5){
+    const keys=log.filter(e=>e.kind==='k'),out=[];
+    for(let k=win;k<keys.length;k+=step){
+      const d=keys[k].at-keys[k-win].at;
+      if(d>0) out.push(Math.min(200,(win/5)/(d/60000)));
+    }
+    return out;
+  }
+
+  const emptyProfile=()=>({n:0,sessions:0,ch:{},bg:{},cf:{},cat:{},bgN:0,bgSum:0});
+  function mergeProfile(p,log){
+    p=p||emptyProfile();
+    let prev=null;
+    for(const e of log){
+      if(e.kind!=='k'){prev=null;continue}
+      p.n++;
+      const c=lc(e.exp),ch=p.ch[c]||(p.ch[c]=[0,0]);ch[0]++;if(!e.ok) ch[1]++;
+      const cl=charClass(e.exp),ct=p.cat[cl]||(p.cat[cl]=[0,0]);ct[0]++;if(!e.ok) ct[1]++;
+      if(!e.ok){const k=e.exp+'\u0001'+e.got;p.cf[k]=(p.cf[k]||0)+1}
+      if(prev&&prev.ok&&e.ok&&e.i===prev.i+1&&e.dt!==null&&e.dt<IDLE_CAP){
+        const k=lc(prev.exp)+lc(e.exp),b=p.bg[k]||(p.bg[k]=[0,0]);
+        const d=Math.min(e.dt,1500);b[0]++;b[1]+=d;p.bgN++;p.bgSum+=d;
+      }
+      prev=e;
+    }
+    return p;
+  }
+
+  function analyze(p,{minBg=2,minCh=4}={}){
+    if(!p||!p.n) return null;
+    const mean=p.bgN?p.bgSum/p.bgN:0;
+    const slow=Object.entries(p.bg).filter(([,v])=>v[0]>=minBg).map(([k,[n,s]])=>({k,n,ms:s/n,ratio:mean?(s/n)/mean:1}))
+      .filter(x=>x.ratio>1.2).sort((a,b)=>(b.ratio-1)*Math.sqrt(b.n)-(a.ratio-1)*Math.sqrt(a.n)).slice(0,6);
+    const errChars=Object.entries(p.ch).filter(([,v])=>v[0]>=minCh&&v[1]>0).map(([k,[n,e]])=>({k,n,e,rate:e/n}))
+      .sort((a,b)=>b.rate-a.rate||b.n-a.n).slice(0,6);
+    const conf=Object.entries(p.cf).map(([k,n])=>{const [exp,got]=k.split('\u0001');return {exp,got,n}})
+      .sort((a,b)=>b.n-a.n).slice(0,5);
+    const cats=Object.entries(p.cat).filter(([,v])=>v[0]>=8).map(([k,[n,e]])=>({k,n,e,rate:e/n})).sort((a,b)=>b.rate-a.rate);
+    const total=Object.values(p.cat).reduce((a,[n])=>a+n,0),errs=Object.values(p.cat).reduce((a,[,e])=>a+e,0);
+    return {mean,slow,errChars,conf,cats,overall:total?errs/total:0,n:p.n,sessions:p.sessions};
+  }
+
+  function hint(a){
+    if(!a) return null;
+    const worst=a.cats[0];
+    if(worst&&worst.e>=2&&worst.rate>=Math.max(.03,a.overall*1.6))
+      return `Die meisten Fehler passieren bei „${worst.k}“ (${(worst.rate*100).toFixed(1).replace('.',',')} % gegenüber Ø ${(a.overall*100).toFixed(1).replace('.',',')} %). Übe das gezielt langsam und fehlerfrei.`;
+    if(a.slow[0])
+      return `Die Kombination „${a.slow[0].k}“ bremst dich aus (${Math.round(a.slow[0].ms)} ms statt Ø ${Math.round(a.mean)} ms). Wiederhole sie ein paar Mal bewusst.`;
+    return a.n<1500?'Noch zu wenig Daten für klare Muster – nach ein paar Abschnitten wird die Analyse treffsicherer.':null;
+  }
+  return {matches,wc,prepare,segment,charClass,Session,series,emptyProfile,mergeProfile,analyze,hint,IDLE_CAP};
+})();
+// </core>
+
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store={
+  get(k,d){try{const v=localStorage.getItem('anschlag.v1.'+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem('anschlag.v1.'+k,JSON.stringify(v));return true}catch(e){return false}},
+  del(k){try{localStorage.removeItem('anschlag.v1.'+k)}catch(e){}}
+};
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- Demotext (eigener Platzhalter, kein Zitat) ----------
+const DEMO_PARAS=[
+ 'Wer zum ersten Mal an einer Schreibmaschine saß, kannte das Gefühl: Jeder Anschlag war eine kleine Entscheidung. Es gab keine Rückgängig-Taste, kein Löschen, nur das leise Rattern der Typenhebel und den Klang der Glocke am Zeilenende. Genauigkeit war keine Tugend, sondern eine Notwendigkeit.',
+ 'Heute tippen wir schneller und gedankenloser – und genau darin liegt die Chance. Wer langsam beginnt, die Finger ruhig führt und jeden Fehler bewusst wahrnimmt, baut ein Gedächtnis der Hände auf. „Erst die Sicherheit, dann das Tempo“, sagt man in den Kursen, und es stimmt: Die Geschwindigkeit kommt von allein.',
+ 'Die deutsche Sprache stellt dabei eigene Aufgaben. Umlaute wie ä, ö und ü, das scharfe ß, lange Wörter wie Donaudampfschifffahrtsgesellschaft und Satzzeichen in allen Lagen verlangen Aufmerksamkeit. Auch Zahlen (etwa 1914, 1938 oder 2026) wollen geübt sein.',
+ 'Übe täglich zehn Minuten, nicht eine Stunde am Wochenende. Atme ruhig, halte die Handgelenke locker und lass den Blick auf dem Text ruhen, nicht auf den Tasten.'
+];
+const DEMO={id:'demo',title:'Demotext',author:'Platzhalter – über „Text laden“ kannst du ein Kapitel aus Projekt Gutenberg einfügen',
+  sections:Core.segment(DEMO_PARAS,{min:40,max:140})};
+
+// ---------- Zustand ----------
+let settings=Object.assign({strict:true,sound:true,theme:null},store.get('settings',{}));
+if(!settings.theme) settings.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+let books=store.get('books',[]);
+let profile=store.get('profile',null)||Core.emptyProfile();
+let sessions=store.get('sessions',[]);
+let progress=store.get('progress',{});
+let book=null,secIdx=0,sess=null,spans=[],lastY=-1,timer=null;
+
+const el={text:$('#text'),caret:null,inp:$('#inp'),mask:$('#mask'),hint:$('#hint'),bar:$('#barFill'),
+  wpm:$('#lWpm'),acc:$('#lAcc'),streak:$('#lStreak'),time:$('#lTime'),
+  veil:$('#resultVeil'),card:$('#resultCard')};
+
+const allBooks=()=>[DEMO,...books];
+const saveSettings=()=>store.set('settings',settings);
+
+// ---------- Ton ----------
+const Snd={ctx:null,noise:null,
+  init(){
+    if(this.ctx) return true;
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC) return false;
+    this.ctx=new AC();
+    const len=Math.floor(this.ctx.sampleRate*.035),b=this.ctx.createBuffer(1,len,this.ctx.sampleRate),d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+    this.noise=b;return true;
+  },
+  play(kind){
+    if(!settings.sound||!this.init()) return;
+    const c=this.ctx;if(c.state==='suspended') c.resume();
+    const t=c.currentTime;
+    if(kind==='err'){
+      const o=c.createOscillator(),g=c.createGain();o.type='triangle';
+      o.frequency.setValueAtTime(170,t);o.frequency.exponentialRampToValueAtTime(95,t+.14);
+      g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.0001,t+.16);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.18);return;
+    }
+    if(kind==='done'){
+      [523.25,659.25,783.99,1046.5].forEach((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;
+        const s=t+i*.09;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.05,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.6);
+        o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+.65);
+      });return;
+    }
+    const src=c.createBufferSource();src.buffer=this.noise;src.playbackRate.value=.9+Math.random()*.25;
+    const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=.9;
+    f.frequency.value=kind==='space'?650:1400+Math.random()*900;
+    const g=c.createGain();g.gain.value=kind==='space'?.28:.17;
+    src.connect(f);f.connect(g);g.connect(c.destination);src.start(t);
+    const o=c.createOscillator(),g2=c.createGain();o.type='sine';o.frequency.value=kind==='space'?120:210;
+    g2.gain.setValueAtTime(.035,t);g2.gain.exponentialRampToValueAtTime(.0001,t+.05);
+    o.connect(g2);g2.connect(c.destination);o.start(t);o.stop(t+.06);
+  }
+};
+
+// ---------- Darstellung ----------
+function applyTheme(){document.documentElement.dataset.theme=settings.theme;$('#themeBtn').textContent=settings.theme==='dark'?'Hell':'Dunkel'}
+function applyButtons(){
+  $('#modeBtn').textContent=settings.strict?'Modus: Strikt':'Modus: Frei';
+  $('#modeBtn').title=settings.strict?'Strikt: Der Cursor wartet auf das richtige Zeichen.':'Frei: Fehler bleiben stehen und müssen mit ⌫ korrigiert werden.';
+  $('#soundBtn').textContent=settings.sound?'Ton: an':'Ton: aus';
+  applyTheme();
+}
+const fmtTime=ms=>{const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+function openBook(id,idx){
+  book=allBooks().find(b=>b.id===id)||DEMO;
+  store.set('current',book.id);
+  secIdx=Math.max(0,Math.min(idx??0,book.sections.length-1));
+  renderSection();
+}
+
+function renderSection(){
+  const sec=book.sections[secIdx];
+  sess=new Core.Session(sec.text,{strict:settings.strict});
+  progress[book.id]=secIdx;store.set('progress',progress);
+  const breaks=new Set(sec.breaks||[]);
+  el.text.textContent='';spans=[];
+  const frag=document.createDocumentFragment();
+  sess.chars.forEach((ch,i)=>{
+    const s=document.createElement('span');s.className='c';s.textContent=ch;spans.push(s);frag.appendChild(s);
+    if(breaks.has(i)){const d=document.createElement('div');d.className='pbk';frag.appendChild(d)}
+  });
+  el.text.appendChild(frag);
+  el.caret=document.createElement('div');el.caret.className='caret';el.text.appendChild(el.caret);
+  $('#bookTitle').textContent=book.title;
+  $('#bookAuthor').textContent=book.author||'';
+  $('#secInfo').textContent=`Abschnitt ${secIdx+1} / ${book.sections.length}`;
+  el.veil.hidden=true;el.hint.textContent='';
+  lastY=-1;updateCaret(true);updateLive();focusInput();
+}
+
+function paint(i){const s=spans[i];if(!s) return;s.className='c'+(sess.stateAt(i)?' '+sess.stateAt(i):'')}
+
+function updateCaret(instant){
+  const len=spans.length;if(!len) return;
+  const atEnd=sess.cursor>=len,s=spans[atEnd?len-1:sess.cursor];
+  const x=s.offsetLeft+(atEnd?s.offsetWidth:0),y=s.offsetTop,c=el.caret;
+  const lineChanged=y!==lastY;
+  c.style.height=s.offsetHeight+'px';
+  if(lineChanged||instant) c.style.transition='none';
+  c.style.transform=`translate(${x}px,${y}px)`;
+  if(lineChanged||instant) requestAnimationFrame(()=>requestAnimationFrame(()=>{c.style.transition=''}));
+  if(lineChanged&&lastY!==-1) c.scrollIntoView({block:'center',behavior:reduced?'auto':'smooth'});
+  lastY=y;
+  el.bar.style.width=(sess.cursor/len*100)+'%';
+}
+
+function updateLive(){
+  const st=sess.stats();
+  el.wpm.textContent=sess.start===null?'0':Math.round(st.wpm);
+  el.acc.textContent=(st.accuracy*100).toFixed(st.total?0:0).replace('.',',')+' %';
+  const old=el.streak.textContent;
+  el.streak.textContent=sess.streak;
+  if(sess.streak&&sess.streak%50===0&&String(sess.streak)!==old&&!reduced){
+    el.streak.classList.remove('glow');void el.streak.offsetWidth;el.streak.classList.add('glow');
+  }
+  el.time.textContent=fmtTime(st.durationMs);
+}
+
+function flashAt(i){
+  const s=spans[i];if(!s) return;
+  s.classList.remove('flash');void s.offsetWidth;s.classList.add('flash');
+  el.caret.classList.remove('err');void el.caret.offsetWidth;el.caret.classList.add('err');
+}
+
+// ---------- Eingabe ----------
+function focusInput(){if(!document.querySelector('dialog[open]')&&el.veil.hidden) el.inp.focus({preventScroll:true})}
+function onChar(ch,t){
+  if(!sess||sess.done) return;
+  const r=sess.type(ch,t);
+  if(!r){ if(!sess.strict&&sess.cursor>=sess.chars.length&&!sess.done) el.hint.textContent='Im Text sind noch Fehler – korrigiere sie mit der Rücktaste.'; return }
+  el.hint.textContent='';
+  paint(r.i);
+  if(r.ok){
+    const s=spans[r.i];s.classList.add('pop');
+    Snd.play(ch===' '?'space':'key');
+  }else{
+    if(sess.strict) flashAt(r.i);
+    Snd.play('err');
+  }
+  updateCaret();updateLive();
+  if(sess.done) finish();
+}
+function onBackspace(t){
+  if(!sess||sess.done) return;
+  const r=sess.backspace(t);if(!r) return;
+  el.hint.textContent='';paint(r.i);updateCaret();updateLive();
+}
+let composing=false;
+el.inp.addEventListener('compositionstart',()=>{composing=true});
+el.inp.addEventListener('compositionend',e=>{
+  composing=false;const t=e.timeStamp||performance.now();
+  if(e.data) for(const ch of Array.from(e.data)) onChar(ch,t);
+  el.inp.value='';
+});
+el.inp.addEventListener('beforeinput',e=>{
+  if(composing||e.isComposing) return;
+  e.preventDefault();
+  if(e.inputType==='insertText'&&e.data){
+    const t=e.timeStamp||performance.now();
+    for(const ch of Array.from(e.data)) onChar(ch,t);
+  }
+});
+el.inp.addEventListener('input',()=>{if(!composing) el.inp.value=''});
+el.inp.addEventListener('paste',e=>e.preventDefault());
+el.inp.addEventListener('drop',e=>e.preventDefault());
+el.inp.addEventListener('focus',()=>{el.mask.hidden=true;if(sess) sess.resume(performance.now())});
+el.inp.addEventListener('blur',()=>{
+  if(!sess||sess.done||!el.veil.hidden||document.querySelector('dialog[open]')) return;
+  sess.pause(performance.now());el.mask.hidden=false;
+});
+document.addEventListener('keydown',e=>{
+  if(document.querySelector('dialog[open]')) return;
+  if(e.key==='Escape'){e.preventDefault();renderSection();return}
+  if(!el.veil.hidden){ if(e.key==='Enter'){e.preventDefault();go(1)} return }
+  if(e.key==='Backspace'&&document.activeElement===el.inp&&!composing&&!e.isComposing){
+    e.preventDefault();onBackspace(e.timeStamp||performance.now());
+  }
+});
+el.mask.addEventListener('click',focusInput);
+$('#sheet').addEventListener('click',focusInput);
+timer=setInterval(()=>{if(sess&&sess.start!==null&&!sess.done&&sess.pausedAt===null) updateLive()},400);
+
+// ---------- Abschluss & Ergebnis ----------
+function round1(x){return Math.round(x*10)/10}
+function finish(){
+  const st=sess.stats();
+  const prevBest=sessions.reduce((m,s)=>Math.max(m,s.wpm),0),first=sessions.length===0;
+  sessions.push({d:Date.now(),b:book.id,bt:book.title,s:secIdx,wpm:round1(st.wpm),raw:round1(st.raw),acc:round1(st.accuracy*100),
+    err:st.errors,cons:st.consistency===null?null:round1(st.consistency),dur:Math.round(st.durationMs),strict:settings.strict});
+  if(sessions.length>200) sessions=sessions.slice(-200);
+  profile=Core.mergeProfile(profile,sess.log);profile.sessions++;
+  store.set('sessions',sessions);store.set('profile',profile);
+  progress[book.id]=(secIdx+1)%book.sections.length;store.set('progress',progress);
+  Snd.play('done');
+  showResult(st,{newBest:!first&&st.wpm>prevBest,perfect:st.errors===0});
+}
+const f1=x=>x.toFixed(1).replace('.',',');
+const showCh=c=>c===' '?'␣':c;
+
+function sparkSvg(vals){
+  if(vals.length<2) return '';
+  const W=300,H=60,mx=Math.max(...vals),mn=Math.min(...vals),rg=Math.max(1,mx-mn);
+  const flat=mx-mn<1;
+  const pts=vals.map((v,i)=>[i/(vals.length-1)*W,flat?H/2:H-8-((v-mn)/rg)*(H-18)]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Tempoverlauf">
+    <defs><linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+    <path d="${d} L${W} ${H} L0 ${H} Z" fill="url(#sg)"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+function insightsHtml(a){
+  if(!a) return '<p class="empty">Noch keine Daten.</p>';
+  const note=a.n<3000?` <span class="note">· vorläufig (${a.n} Anschläge)</span>`:'';
+  let h=`<div class="cols"><div><h3>Langsame Kombinationen${note}</h3>`;
+  h+=a.slow.length?`<ul class="list">${a.slow.map(x=>`<li><span class="mono">${esc(x.k.replace(/ /g,'␣'))}</span><span>${Math.round(x.ms)} ms · ×${f1(x.ratio)}</span></li>`).join('')}</ul>`:'<p class="empty">Noch nichts Auffälliges.</p>';
+  h+=`</div><div><h3>Fehleranfällige Zeichen</h3>`;
+  h+=a.errChars.length?`<ul class="list">${a.errChars.map(x=>`<li><span class="mono">${esc(showCh(x.k))}</span><span>${x.e} von ${x.n} · ${Math.round(x.rate*100)} %</span></li>`).join('')}</ul>`:'<p class="empty">Keine wiederkehrenden Fehler.</p>';
+  h+=`</div><div><h3>Verwechslungen</h3>`;
+  h+=a.conf.length?`<ul class="list">${a.conf.map(x=>`<li><span>soll <span class="mono">${esc(showCh(x.exp))}</span> · getippt <span class="mono">${esc(showCh(x.got))}</span></span><span>${x.n}×</span></li>`).join('')}</ul>`:'<p class="empty">Keine Fehler – stark.</p>';
+  h+=`</div><div><h3>Fehlerquote nach Zeichenart</h3>`;
+  const cap=Math.max(.1,...a.cats.map(c=>c.rate));
+  h+=a.cats.length?a.cats.map(c=>`<div class="cat"><span>${esc(c.k)}</span><div class="meter"><i style="width:${Math.min(100,c.rate/cap*100)}%"></i></div><b>${(c.rate*100).toFixed(1).replace('.',',')} %</b></div>`).join(''):'<p class="empty">Noch zu wenig Daten.</p>';
+  h+='</div></div>';
+  const t=Core.hint(a);
+  if(t) h+=`<div class="tip">${esc(t)}</div>`;
+  return h;
+}
+
+function showResult(st,{newBest,perfect}){
+  const a=Core.analyze(profile);
+  const badges=[];if(perfect) badges.push('Fehlerfrei');if(newBest) badges.push('Neuer Bestwert');
+  el.card.innerHTML=`
+    <h2 id="resTitle">Abschnitt geschafft</h2>
+    <div class="sub">${esc(book.title)} · Abschnitt ${secIdx+1} von ${book.sections.length}</div>
+    ${badges.length?`<div class="badges">${badges.map(b=>`<span class="badge">${b}</span>`).join('')}</div>`:''}
+    <div class="big">
+      <div><b>${Math.round(st.wpm)}</b><span>WPM netto</span></div>
+      <div><b>${(st.accuracy*100).toFixed(1).replace('.',',')} %</b><span>Genauigkeit</span></div>
+      <div><b>${st.consistency===null?'–':Math.round(st.consistency)+' %'}</b><span>Gleichmäßigkeit</span></div>
+      <div><b>${fmtTime(st.durationMs)}</b><span>Zeit</span></div>
+    </div>
+    <div class="small">Brutto ${Math.round(st.raw)} WPM · ${st.errors} Fehler · ${st.backspaces} Korrekturen · längste fehlerfreie Serie ${st.bestStreak} · ${Math.round(st.wpm*5)} Zeichen/min</div>
+    ${sparkSvg(Core.series(sess.log))}
+    <h3>Auffälligkeiten aus deinem Profil (${profile.sessions} ${profile.sessions===1?'Abschnitt':'Abschnitte'})</h3>
+    ${insightsHtml(a)}
+    <div class="actions"><button id="resAgain">Nochmal</button><button class="primary" id="resNext">Weiter ↵</button></div>`;
+  el.veil.hidden=false;
+  $('#resAgain').onclick=()=>{el.veil.hidden=true;renderSection()};
+  $('#resNext').onclick=()=>go(1);
+  $('#resNext').focus();
+}
+
+// ---------- Navigation ----------
+function go(d){
+  secIdx=(secIdx+d+book.sections.length)%book.sections.length;
+  el.veil.hidden=true;renderSection();
+}
+$('#prev').onclick=()=>go(-1);
+$('#next').onclick=()=>go(1);
+$('#modeBtn').onclick=()=>{settings.strict=!settings.strict;saveSettings();applyButtons();renderSection()};
+$('#soundBtn').onclick=()=>{settings.sound=!settings.sound;saveSettings();applyButtons();focusInput()};
+$('#themeBtn').onclick=()=>{settings.theme=settings.theme==='dark'?'light':'dark';saveSettings();applyTheme();focusInput()};
+
+// ---------- Text laden ----------
+const loadDlg=$('#loadDlg'),profDlg=$('#profDlg');
+function renderBookList(){
+  const ul=$('#bookList');
+  ul.innerHTML=allBooks().map(b=>`<li><span>${esc(b.title)}${b.author&&b.id!=='demo'?' <small>– '+esc(b.author)+'</small>':''}<br><small>${b.sections.length} Abschnitte</small></span>
+    <span><button data-open="${esc(b.id)}">Öffnen</button>${b.id==='demo'?'':` <button data-del="${esc(b.id)}">Löschen</button>`}</span></li>`).join('');
+}
+$('#loadBtn').onclick=()=>{$('#ldMsg').textContent='';renderBookList();loadDlg.showModal()};
+$('#ldClose').onclick=()=>loadDlg.close();
+loadDlg.addEventListener('close',()=>focusInput());
+$('#bookList').addEventListener('click',e=>{
+  const o=e.target.dataset.open,d=e.target.dataset.del;
+  if(o){loadDlg.close();openBook(o,progress[o]||0)}
+  if(d&&confirm('Diesen Text wirklich löschen?')){
+    books=books.filter(b=>b.id!==d);store.set('books',books);delete progress[d];store.set('progress',progress);
+    if(book.id===d) openBook('demo',0);
+    renderBookList();
+  }
+});
+$('#ldFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f) return;
+  $('#ldText').value=await f.text();
+  if(!$('#ldTitle').value) $('#ldTitle').value=f.name.replace(/\.[^.]+$/,'');
+});
+$('#ldGo').onclick=()=>{
+  const msg=$('#ldMsg');msg.className='msg';
+  const raw=$('#ldText').value;
+  if(raw.trim().length<200){msg.className='msg err';msg.textContent='Bitte mindestens ein paar Absätze Text einfügen.';return}
+  const p=Core.prepare(raw),secs=Core.segment(p.paragraphs);
+  if(!secs.length){msg.className='msg err';msg.textContent='Im Text wurden keine Absätze gefunden.';return}
+  const b={id:'b'+Date.now().toString(36),title:$('#ldTitle').value.trim()||p.headings[0]||'Ohne Titel',
+    author:$('#ldAuthor').value.trim(),sections:secs,created:Date.now()};
+  books.push(b);
+  if(!store.set('books',books)){books.pop();msg.className='msg err';msg.textContent='Der Browser-Speicher ist voll. Lösche einen anderen Text oder lade ein kürzeres Kapitel.';return}
+  const words=p.paragraphs.reduce((a,x)=>a+Core.wc(x),0);
+  let m=`${secs.length} Abschnitte, ${words} Wörter geladen.`;
+  if(p.rare.length) m+=` Seltene Zeichen im Text: ${p.rare.slice(0,12).join(' ')}`;
+  $('#ldText').value='';$('#ldTitle').value='';$('#ldAuthor').value='';$('#ldFile').value='';
+  renderBookList();msg.textContent=m;
+  loadDlg.close();openBook(b.id,0);
+};
+
+// ---------- Profil ----------
+function renderProfile(){
+  const a=Core.analyze(profile),last=sessions.slice(-10).reverse();
+  let h=`<p class="small">${profile.sessions} ${profile.sessions===1?'Abschnitt':'Abschnitte'} · ${profile.n} Anschläge ausgewertet. Die Daten liegen nur in diesem Browser.</p>`;
+  h+=insightsHtml(a);
+  h+='<h3 style="margin-top:1.4rem">Letzte Abschnitte</h3>';
+  h+=last.length?`<table><thead><tr><th>Datum</th><th>Text</th><th>WPM</th><th>Genauigkeit</th><th>Gleichm.</th></tr></thead><tbody>${last.map(s=>`<tr><td>${new Date(s.d).toLocaleDateString('de-AT')}</td><td>${esc(s.bt)} · ${s.s+1}</td><td>${s.wpm}</td><td>${String(s.acc).replace('.',',')} %</td><td>${s.cons===null?'–':Math.round(s.cons)+' %'}</td></tr>`).join('')}</tbody></table>`:'<p class="empty">Noch keine Abschnitte abgeschlossen.</p>';
+  $('#profBody').innerHTML=h;
+}
+$('#profBtn').onclick=()=>{renderProfile();profDlg.showModal()};
+$('#profClose').onclick=()=>profDlg.close();
+profDlg.addEventListener('close',()=>focusInput());
+$('#profExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify({version:1,exported:new Date().toISOString(),sessions,profile},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='anschlag-daten.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$('#profReset').onclick=()=>{
+  if(!confirm('Profil und Verlauf wirklich löschen? Deine geladenen Texte bleiben erhalten.')) return;
+  sessions=[];profile=Core.emptyProfile();store.del('sessions');store.del('profile');renderProfile();
+};
+
+// ---------- Start ----------
+applyButtons();
+const cur=store.get('current','demo');
+openBook(cur,progress[cur]||0);
+if(document.hasFocus()===false) {el.mask.hidden=false}
+})();
+</script>
+</body>
+</html>

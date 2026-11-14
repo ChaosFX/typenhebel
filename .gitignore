@@ -1,0 +1,6 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+# Beispieltexte: Ausgaben können Rechte haben (SPEC §8), daher nicht im Repo
+samples/
