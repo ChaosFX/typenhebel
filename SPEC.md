@@ -167,7 +167,8 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - Hinweis in der UI, dass Browserdaten gelöscht werden können; Erinnerung zum Export alle ~30 Sessions.
 - Umgesetzt (2026-11-14): Dexie-Datenbank `typenhebel` mit Tabellen `books` (Metadaten), `texts` (Abschnitte je Buch), `sessions`, `progress`, `kv` (Profil, aktuelles Buch, Stand der letzten Sicherung). Nur die Einstellungen bleiben in localStorage (synchron beim Start nötig, gegen Farbflackern). „Verdichten“ heißt: Ältere Sessions behalten ihre Kennzahlen, nur die Tastenereignisse entfallen; das Profil aggregiert ohnehin alle Sessions. Auswertungen, die Rohdaten brauchen (Phase 3: Ermüdung, Post-Error-Slowing), stützen sich deshalb auf die letzten 30 Sessions.
 - Zusammenführen beim Import: Sessions und Bücher nach ID entdoppeln. Profil: Enthält der Import alle lokalen Sessions, gilt sein Profil; ist er vollständig lokal vorhanden, ändert sich nichts; sind beide disjunkt, werden die Profile addiert; bei teilweiser Überschneidung zählen nur neue Sessions mit Rohdaten. Fortschritt: erledigte Abschnitte vereinigen, lokale Leseposition hat Vorrang. Der Export aus Phase 0/1 (`version: 1`) wird weiter angenommen.
-- Ergänzt (Dominik, 2026-11-14): **Buchmenü** in der Kopfzeile zum Wechseln zwischen den geladenen Büchern; jedes Buch merkt sich seine Stelle.
+- Ergänzt (Dominik, 2026-11-14): **Bibliothek** statt Buchmenü – Seite mit Cover-Raster, Fortschritt je Buch, „Text laden“ und Löschen; jedes Buch merkt sich seine Stelle. Erreichbar über „Bibliothek“ und den Buchtitel.
+- **Cover** werden erzeugt (`src/core/cover.ts`, SVG), nicht aus dem Netz geholt: Coverbilder sind fast immer geschützt. Vier Layouts (Rahmen, Tasten, Initial, Typoskript), neun Farben; automatisch nur Rahmen und Tasten (Dominik), jedes Cover lässt sich in der Bibliothek frei wechseln. Die Wahl liegt in `kv.covers` und wandert mit dem Export.
 
 ### Phase 3: Analyse v2 und adaptives Training
 - `keyboard.ts`: QWERTZ-Zuordnung Zeichen → Finger/Hand/Reihe, Nachbartasten, Shift-Seite.
@@ -197,6 +198,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 
 - Zweig (gest. 1942) ist gemeinfrei. **Ausgaben können trotzdem Rechte haben** (Edition, Rechtschreibbearbeitung, Nachwort). Jede Quelle bekommt Metadaten (Quelle, Edition, Lizenz, Abrufdatum).
 - **Default: kein Mitliefern von Büchern im Repository.** Nutzer importieren ihre Texte selbst (EPUB/TXT). Das ist rechtlich am einfachsten.
+- **projekt-gutenberg.org** (seit 01.01.2026 betrieben von der Cultural Assets GmbH) erlaubt laut Nutzungsbedingungen nur den privaten Gebrauch; Vervielfältigung, Weitergabe, Veröffentlichung und Bearbeitung sind untersagt (Stand 2026-11-14). Nutzer dürfen dort geladene EPUBs also selbst importieren, mitliefern dürfen wir sie ohne Erlaubnis nicht. Dominik fragt beim Betreiber an.
 - Falls später ein eingebauter Korpus gewünscht ist: nur Quellen mit klarer Lizenz (z. B. Wikisource-Texte unter freier Lizenz, geprüfte Gutenberg-Ausgaben) und mit Quellenangabe in der UI. **Das entscheidet Dominik**, Claude Code legt nur die technische Möglichkeit an (`public/corpus/*.json` + Index).
 
 ---
