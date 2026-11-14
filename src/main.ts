@@ -11,7 +11,7 @@ import {
   type SessionStats,
 } from './core';
 import { Sound } from './audio/sound';
-import { store } from './data/store';
+import { migrateLegacyKeys, store } from './data/store';
 import { attachInput } from './input/engine';
 import { DEMO, type Book } from './ui/demo';
 import { esc, fmtTime, round1 } from './ui/format';
@@ -46,6 +46,7 @@ const $ = <T extends HTMLElement = HTMLElement>(s: string): T => {
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- Zustand ----------
+migrateLegacyKeys();
 const settings: Settings = Object.assign(
   { strict: true, sound: true, theme: null },
   store.get<Partial<Settings>>('settings', {}),
@@ -477,7 +478,7 @@ $('#profExport').onclick = () => {
   );
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'anschlag-daten.json';
+  a.download = 'typenhebel-daten.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };

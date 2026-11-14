@@ -1,4 +1,4 @@
-# Anschlag (Repo: typenhebel)
+# Typenhebel
 
 Deutscher Tipptrainer (statisch, GitHub Pages, alles lokal). Spezifikation: SPEC.md.
 

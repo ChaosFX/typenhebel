@@ -11,8 +11,10 @@ export const asTyped = (s: string): string =>
     .replace(/[‚‘’›‹]/g, "'")
     .replace(/[–—]/g, '-');
 
+/** Einstellungen vorbelegen – für die App (typenhebel.v1) und den Prototyp (anschlag.v1). */
 export async function seedSettings(page: Page, settings: Record<string, unknown>): Promise<void> {
   await page.addInitScript((s) => {
-    if (!localStorage.getItem('anschlag.v1.settings')) localStorage.setItem('anschlag.v1.settings', JSON.stringify(s));
+    const prefix = location.protocol === 'file:' ? 'anschlag.v1.' : 'typenhebel.v1.';
+    if (!localStorage.getItem(prefix + 'settings')) localStorage.setItem(prefix + 'settings', JSON.stringify(s));
   }, settings);
 }

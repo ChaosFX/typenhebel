@@ -1,4 +1,4 @@
-# Anschlag
+# Typenhebel
 
 Deutschsprachiger Tipptrainer: gemeinfreie Literatur abtippen, Tippverhalten auswerten. Läuft komplett im Browser, keine Datenübertragung.
 

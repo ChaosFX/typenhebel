@@ -1,4 +1,4 @@
-# Anschlag – Spezifikation (Arbeitstitel)
+# Typenhebel – Spezifikation
 
 Deutschsprachiger Tipptrainer: Man tippt gemeinfreie Literatur ab, die Seite analysiert das Tippverhalten und zeigt Verbesserungsmöglichkeiten. Statische Web-App, gehostet auf GitHub Pages, keine Server, keine Accounts.
 
@@ -219,7 +219,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 
 ## 11. Offene Entscheidungen (Dominik)
 
-1. **Name** des Projekts (Arbeitstitel „Anschlag“).
+1. ~~**Name** des Projekts~~ → entschieden: **Typenhebel** (vorher Arbeitstitel „Anschlag“; Logo-Entwürfe in `design/`).
 2. **Korpus**: Nur Nutzer-Import oder später eingebauter, lizenzgeprüfter Korpus?
 3. **Framework**: Vanilla TS beibehalten oder Svelte?
 4. **Standardmodus**: Strikt (Genauigkeit zuerst) oder Frei?
@@ -232,7 +232,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 ## 12. Vorschlag für die `CLAUDE.md` im Repo
 
 ```md
-# Anschlag
+# Typenhebel
 Deutscher Tipptrainer (statisch, GitHub Pages, alles lokal). Spezifikation: SPEC.md.
 - Sprache der UI und der Kommentare für Nutzerfunktionen: Deutsch. Code und Bezeichner: Englisch.
 - src/core ist DOM-frei und vollständig getestet. Metrikdefinitionen (SPEC §5) nicht ohne Rücksprache ändern.

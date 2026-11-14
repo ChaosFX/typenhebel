@@ -7,7 +7,7 @@ type Count = [n: number, err: number];
 type Timing = [n: number, sumMs: number];
 
 /**
- * Laufend aggregiertes Profil im Format des Prototyps (localStorage `anschlag.v1.profile`).
+ * Laufend aggregiertes Profil im Format des Prototyps (localStorage `typenhebel.v1.profile`).
  * Wird in Phase 2 durch das versionierte Modell aus SPEC §4 ersetzt (mit Migration).
  */
 export interface Profile {
