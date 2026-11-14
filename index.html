@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Anschlag – Literatur abtippen</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div class="book">
+          <div class="bt" id="bookTitle"></div>
+          <div class="ba" id="bookAuthor"></div>
+        </div>
+        <nav class="nav" aria-label="Abschnitte">
+          <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt">‹</button>
+          <span id="secInfo"></span>
+          <button id="next" title="Nächster Abschnitt" aria-label="Nächster Abschnitt">›</button>
+        </nav>
+        <div class="tools">
+          <button id="modeBtn"></button>
+          <button id="soundBtn"></button>
+          <button id="themeBtn"></button>
+          <button id="loadBtn">Text laden</button>
+          <button id="profBtn">Profil</button>
+        </div>
+      </header>
+
+      <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+      <div class="live" aria-hidden="true">
+        <span>Tempo<b id="lWpm">0</b></span>
+        <span>Genauigkeit<b id="lAcc">100 %</b></span>
+        <span>Serie<b id="lStreak">0</b></span>
+        <span>Zeit<b id="lTime">0:00</b></span>
+      </div>
+
+      <main class="sheet" id="sheet">
+        <div class="text" id="text" aria-label="Abzutippender Text"></div>
+        <div class="mask" id="mask" hidden>Klicke hierher, um weiterzutippen</div>
+      </main>
+      <div class="hint" id="hint" role="status"></div>
+      <div class="foot">
+        <span><kbd>Esc</kbd> Abschnitt neu starten</span>
+        <span><kbd>⌫</kbd> korrigieren (nur im Modus „Frei“)</span>
+        <span><kbd>↵</kbd> weiter nach dem Abschnitt</span>
+      </div>
+    </div>
+
+    <textarea
+      id="inp"
+      aria-label="Eingabefeld zum Abtippen"
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+    ></textarea>
+
+    <div class="veil" id="resultVeil" hidden>
+      <div class="card" id="resultCard" role="dialog" aria-modal="true" aria-labelledby="resTitle"></div>
+    </div>
+
+    <dialog id="loadDlg">
+      <div class="in">
+        <h2>Text laden</h2>
+        <p class="small">
+          Öffne auf <b>projekt-gutenberg.org</b> ein Kapitel, markiere den Text, kopiere ihn und füge ihn hier ein –
+          oder lade eine <code>.txt</code>-Datei. Überschriften, Seitenzahlen und Fußnotenmarker werden entfernt, der
+          Text wird in Abschnitte geteilt. Alles bleibt in deinem Browser.
+        </p>
+        <label for="ldTitle">Titel</label
+        ><input type="text" id="ldTitle" placeholder="z. B. Die Welt von Gestern – Vorwort" />
+        <label for="ldAuthor">Autor</label><input type="text" id="ldAuthor" placeholder="z. B. Stefan Zweig" />
+        <label for="ldFile">Datei (.txt)</label><input type="file" id="ldFile" accept=".txt,text/plain" />
+        <label for="ldText">… oder Text einfügen</label
+        ><textarea class="paste" id="ldText" spellcheck="false"></textarea>
+        <div class="msg" id="ldMsg"></div>
+        <h3 style="margin-top: 1.2rem">Meine Texte</h3>
+        <ul class="books" id="bookList"></ul>
+        <div class="actions">
+          <button id="ldClose">Schließen</button><button class="primary" id="ldGo">Laden</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="profDlg">
+      <div class="in">
+        <h2>Dein Profil</h2>
+        <div id="profBody"></div>
+        <div class="actions">
+          <button id="profReset">Daten löschen</button>
+          <button id="profExport">Exportieren (JSON)</button>
+          <button class="primary" id="profClose">Schließen</button>
+        </div>
+      </div>
+    </dialog>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
