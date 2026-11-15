@@ -78,3 +78,15 @@ export {
   type RhythmSession,
   type SlowGroup,
 } from './rhythm';
+export {
+  buildTraining,
+  DEFAULT_TARGETS,
+  pickSentences,
+  seeded,
+  sentencesOf,
+  trainingTargets,
+  wordDrill,
+  wordsOf,
+  type Target,
+  type TrainingSection,
+} from './training';

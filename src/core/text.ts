@@ -2,6 +2,8 @@ export interface Section {
   text: string;
   /** Index des Leerzeichens nach einem Absatzende */
   breaks: number[];
+  /** Hinweis über dem Abschnitt (Training: was geübt wird und warum) */
+  note?: string;
 }
 
 export interface Prepared {

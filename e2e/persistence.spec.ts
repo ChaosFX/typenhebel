@@ -8,7 +8,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function importEpub(page: Page): Promise<void> {
-  await page.locator('#loadBtn').click();
+  await page.locator('#libBtn').click();
+  await page.locator('#libLoad').click();
   await page
     .locator('#ldFile')
     .setInputFiles({ name: 'testbuch.epub', mimeType: 'application/epub+zip', buffer: Buffer.from(makeEpub()) });

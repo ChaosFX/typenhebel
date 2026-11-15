@@ -1,6 +1,6 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
-// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Text laden, Profil).
+// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil).
 const ADDITIONS = ['.brand'];
 // Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen; dort ausblenden.
 const MOVED = ['#loadBtn', '#profBtn'];
