@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "e2e", "scripts", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "src/**/*.svelte", "tests", "e2e", "scripts", "vite.config.ts", "playwright.config.ts"]
 }

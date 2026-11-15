@@ -44,7 +44,7 @@ Dieses Dokument ist die Arbeitsgrundlage für Claude Code. Der funktionierende P
 ## 3. Stack und Struktur
 
 - **Vite + TypeScript** (strict), **Vitest** für Logik, **Playwright** für E2E.
-- UI-Framework: zunächst **kein Framework** (Vanilla TS mit kleinen Modulen). Falls der Zustand unübersichtlich wird, Svelte erwägen, dann aber Rücksprache.
+- UI-Framework: **Svelte 5** (entschieden 2026-11-15, vor Phase 3; vorher Vanilla TS). Begründung: Phase 3 bringt viele neue Auswertungsansichten, und `main.ts` war mit globalem Zustand und HTML-Strings an seine Grenze gekommen. Svelte wird beim Bauen übersetzt, keine externen Requests. Der Tipp-Hotpath (Zeichen färben, Cursor, Eingabe) bleibt bewusst imperativ (`src/app/typing.svelte.ts`).
 - **Dexie** für IndexedDB. **JSZip** (oder `fflate`) für EPUB.
 - Deployment: GitHub Actions → GitHub Pages. `base` in `vite.config.ts` auf den Repo-Namen setzen.
 - Keine Laufzeit-Abhängigkeit von CDNs, keine externen Requests.
@@ -62,7 +62,11 @@ Dieses Dokument ist die Arbeitsgrundlage für Claude Code. Der funktionierende P
 │  │  ├─ analysis.ts          # Profil, Analyse, Drills
 │  │  └─ keyboard.ts          # QWERTZ-Layout: Finger/Hand/Nachbartasten
 │  ├─ input/engine.ts         # Textarea, beforeinput, Komposition, Backspace
-│  ├─ ui/                     # Rendering: Text, Cursor, Ergebnis, Dialoge
+│  ├─ app/state.svelte.ts     # App-Zustand (Runes) und Abläufe: Buch öffnen, Abschnitt, Abschluss, Sichern
+│  ├─ app/typing.svelte.ts    # Tippfläche: Zeichen, Cursor, Live-Werte (imperativ, pro Anschlag)
+│  ├─ components/             # Svelte: Ergebnis, Dialoge (Bibliothek, Cover, Text laden, Profil), Auswertungen
+│  ├─ ui/                     # Demotext, Formatierung
+│  ├─ App.svelte              # Hauptansicht
 │  ├─ audio/sound.ts
 │  ├─ data/db.ts              # Dexie-Schema, Migrationen, Export/Import
 │  ├─ data/records.ts         # Datensätze, Exportformat, Zusammenführen (ohne IndexedDB, getestet)
@@ -138,7 +142,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - Einfügen, Drop, Wortlöschen (Strg+Rücktaste) und Zeilenumbruch blockieren.
 - **Blur = Pause**, Fokus = Fortsetzen; das erste Intervall nach Pause ist `null`.
 - Tippen über das Textende hinaus ignorieren; im freien Modus Hinweis anzeigen, wenn noch Fehler vorhanden sind.
-- **Testmatrix**: Chrome, Firefox, Safari (macOS), jeweils mit deutscher Tastatur inkl. Tottasten, `ß`, `ä ö ü`, `Shift`-Zeichen, `AltGr`-Zeichen (`@ € { }`). Diese Prüfung kann Claude Code nicht vollständig automatisieren. Dominik testet manuell, Claude Code liefert dafür eine kurze Checkliste.
+- **Testmatrix**: Firefox unter Linux (Fedora, Hauptplattform) und Windows (beruflich), jeweils mit deutschem Layout, Standard-ISO-Tastatur; dazu Chrome/Edge und Safari (macOS). Automatisiert laufen die E2E-Tests in Chromium und Firefox. Geprüft wird jeweils mit deutscher Tastatur inkl. Tottasten, `ß`, `ä ö ü`, `Shift`-Zeichen, `AltGr`-Zeichen (`@ € { }`). Diese Prüfung kann Claude Code nicht vollständig automatisieren. Dominik testet manuell, Claude Code liefert dafür eine kurze Checkliste.
 
 ---
 
@@ -197,10 +201,10 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 ## 8. Texte und Rechte
 
 - Zweig (gest. 1942) ist gemeinfrei. **Ausgaben können trotzdem Rechte haben** (Edition, Rechtschreibbearbeitung, Nachwort). Jede Quelle bekommt Metadaten (Quelle, Edition, Lizenz, Abrufdatum).
-- **Default: kein Mitliefern von Büchern im Repository.** Nutzer importieren ihre Texte selbst (EPUB/TXT). Das ist rechtlich am einfachsten.
+- Ursprünglicher Default: kein Mitliefern von Büchern im Repository; Nutzer importieren ihre Texte selbst (EPUB/TXT). Inzwischen anders entschieden, siehe unten.
 - **projekt-gutenberg.org** (seit 01.01.2026 betrieben von der Cultural Assets GmbH) erlaubt laut Nutzungsbedingungen nur den privaten Gebrauch; Vervielfältigung, Weitergabe, Veröffentlichung und Bearbeitung sind untersagt (Stand 2026-11-14). Nutzer dürfen dort geladene EPUBs also selbst importieren, mitliefern dürfen wir sie ohne Erlaubnis nicht. Dominik fragt beim Betreiber an.
-- **Entschieden (Dominik, 2026-11-14): Korpus wird trotzdem mitgeliefert**, die Anfrage beim Betreiber läuft parallel. Umsetzung: `scripts/corpus.config.json` (Quelle, Kapitel ohne Autorentext wie Zeittafeln, Rechtehinweise) → `npm run corpus` → `public/corpus/*.json` + `index.json`. Die App lädt ein Buch erst auf Klick (gleiche Herkunft, keine externe Anfrage) und zeigt die Quelle an. Bücher mit ungeklärter Übersetzungsrechtslage bleiben per `hold` zurück (derzeit *Moby Dick*, Übersetzung Wilhelm Strüver 1927/28, Lebensdaten unbekannt). Bekannte Einschränkung: Verse (Faust) werden wie Prosa zu Fließtext zusammengezogen.
-- Falls später ein eingebauter Korpus gewünscht ist: nur Quellen mit klarer Lizenz (z. B. Wikisource-Texte unter freier Lizenz, geprüfte Gutenberg-Ausgaben) und mit Quellenangabe in der UI. **Das entscheidet Dominik**, Claude Code legt nur die technische Möglichkeit an (`public/corpus/*.json` + Index).
+- **Entschieden (Dominik, 2026-11-14): Korpus wird trotzdem mitgeliefert**, die Anfrage beim Betreiber läuft parallel. Umsetzung: `scripts/corpus.config.json` (Quelle, Kapitel ohne Autorentext wie Zeittafeln, Rechtehinweise) → `npm run corpus` → `public/corpus/*.json` + `index.json`. Die App lädt ein Buch erst auf Klick (gleiche Herkunft, keine externe Anfrage) und zeigt die Quelle an. Bücher mit ungeklärter Übersetzungsrechtslage können per `hold` zurückbleiben. *Moby Dick* (Übersetzung Wilhelm Strüver 1927/28, Lebensdaten unbekannt) hat Dominik am 2026-11-15 nach Hinweis auf das Risiko bewusst freigegeben, zusammen mit *Die Schatzinsel* (Übersetzung Heinrich Conrad). Fällt die Antwort des Betreibers negativ aus, wird `public/corpus/` entfernt. Bekannte Einschränkung: Verse (Faust) werden wie Prosa zu Fließtext zusammengezogen.
+- Neue Bücher für den Korpus: bevorzugt Quellen mit klarer Lizenz (z. B. Wikisource-Texte unter freier Lizenz) und immer mit Quellenangabe in der UI. **Was aufgenommen wird, entscheidet Dominik.**
 
 ---
 
@@ -228,12 +232,12 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 ## 11. Offene Entscheidungen (Dominik)
 
 1. ~~**Name** des Projekts~~ → entschieden: **Typenhebel** (vorher Arbeitstitel „Anschlag“; Logo-Entwürfe in `design/`).
-2. **Korpus**: Nur Nutzer-Import oder später eingebauter, lizenzgeprüfter Korpus?
-3. **Framework**: Vanilla TS beibehalten oder Svelte?
+2. ~~**Korpus**~~ → entschieden: **mitliefern** (2026-11-14, siehe §8), dazu weiterhin Nutzer-Import.
+3. ~~**Framework**~~ → entschieden: **Svelte 5** (2026-11-15, siehe §3).
 4. ~~**Standardmodus**~~ → entschieden: **Strikt** (2026-11-14).
 5. ~~**Sound-Default**~~ → entschieden: **an** (2026-11-14).
 6. ~~**Veröffentlichung**~~ → entschieden: **öffentlich**, Repo ChaosFX/typenhebel, GitHub Pages.
-7. **Plattform des Alltags-Tests**: Welche Tastatur(en) und Betriebssysteme nutzt du? Bestimmt die Testmatrix.
+7. ~~**Plattform des Alltags-Tests**~~ → entschieden: Fedora Linux + Firefox, beruflich Windows; immer deutsches Layout (2026-11-15, siehe §6).
 
 ---
 

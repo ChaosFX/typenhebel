@@ -12,7 +12,11 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}/typenhebel/`,
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Firefox ist die Hauptplattform im Alltag (Fedora), Chromium deckt Chrome/Edge unter Windows ab.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+  ],
   webServer: {
     command: `npx vite build && npx vite preview --port ${PORT} --strictPort`,
     port: PORT,

@@ -16,6 +16,8 @@ test('Abschnitt komplett tippen führt zum Ergebnis', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.locator('#resultVeil')).toBeHidden();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
+  await page.locator('#profBtn').click();
+  await expect(page.locator('#profBody .small').first()).toHaveText(/^1 Abschnitt · \d+ Anschläge ausgewertet\.$/);
 });
 
 test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {
@@ -45,8 +47,9 @@ test('Frei: Fehler bleibt stehen, Rücktaste korrigiert', async ({ page }) => {
   await expect(spans.nth(1)).toHaveClass(/\bok\b/);
 });
 
-test('Einfügen ist wirkungslos', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+test('Einfügen ist wirkungslos', async ({ page, context, browserName }) => {
+  // Firefox kennt diese Berechtigungen nicht und erlaubt die Zwischenablage ohnehin.
+  if (browserName === 'chromium') await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const text = await sectionText(page);
   await page.evaluate((t) => navigator.clipboard.writeText(t), text.slice(0, 40));
   await page.locator('#inp').focus();
