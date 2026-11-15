@@ -18,6 +18,11 @@ test('Abschnitt komplett tippen führt zum Ergebnis', async ({ page }) => {
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
   await page.locator('#profBtn').click();
   await expect(page.locator('#profBody .small').first()).toHaveText(/^1 Abschnitt · \d+ Anschläge ausgewertet\.$/);
+  // Phase 3: Tasten-Wärmebild, Finger, Fehlerarten
+  await expect(page.locator('.keymap .key')).toHaveCount(49);
+  await expect(page.locator('.finger-table tbody tr').first()).toContainText('Kleiner Finger links');
+  await expect(page.locator('.finger-table')).toContainText('Hand rechts');
+  await expect(page.locator('.error-kinds')).toContainText('letzte 1 Abschnitt, 0 Fehler');
 });
 
 test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {

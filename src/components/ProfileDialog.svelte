@@ -1,9 +1,12 @@
 <script lang="ts">
-  import { analyze } from '../core';
+  import { analyze, analyzeFingers } from '../core';
   import { app, storageWarning } from '../app/state.svelte';
   import { clearHistory, importJson, isQuotaError } from '../data/db';
   import { ImportError } from '../data/records';
   import { round1 } from '../ui/format';
+  import ErrorKinds from './ErrorKinds.svelte';
+  import FingerStats from './FingerStats.svelte';
+  import KeyMap from './KeyMap.svelte';
   import Insights from './Insights.svelte';
   import Modal from './Modal.svelte';
 
@@ -14,6 +17,7 @@
 
   // Nur berechnen, solange der Dialog offen ist
   const analysis = $derived(app.profOpen ? analyze(app.profile) : null);
+  const fingers = $derived(app.profOpen ? analyzeFingers(app.profile) : null);
   const last = $derived(app.sessions.slice(-10).reverse());
   const since = $derived(app.sessions.length - app.exportedAtSessions);
   const plural = (n: number): string => (n === 1 ? 'Abschnitt' : 'Abschnitte');
@@ -82,9 +86,20 @@
         {`${app.profile.sessions} ${plural(app.profile.sessions)} · ${app.profile.n} Anschläge ausgewertet.`}
       </p>
       <Insights a={analysis} />
+      {#if fingers}
+        <h3 class="deep-h">
+          Tasten{#if fingers.n < 3000}{' '}<span class="note">· vorläufig ({fingers.n} Anschläge)</span>{/if}
+        </h3>
+        <KeyMap a={fingers} />
+        <p class="small keymap-legend">Je dunkler die Taste, desto häufiger vertippst du dich dort.</p>
+        <div class="cols deep">
+          <FingerStats a={fingers} />
+          <ErrorKinds sessions={app.profOpen ? app.sessions : []} />
+        </div>
+      {/if}
       <h3 style="margin-top:1.4rem">Letzte Abschnitte</h3>
       {#if last.length}
-        <table>
+        <table id="profHist">
           <thead>
             <tr><th>Datum</th><th>Text</th><th>WPM</th><th>Genauigkeit</th><th>Gleichm.</th></tr>
           </thead>
