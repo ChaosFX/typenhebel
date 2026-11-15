@@ -68,3 +68,13 @@ export {
   type GroupStat,
   type KeyStat,
 } from './fingers';
+export {
+  analyzeRhythm,
+  dailyTrend,
+  rhythmAdvice,
+  type DayPoint,
+  type Rhythm,
+  type RhythmOptions,
+  type RhythmSession,
+  type SlowGroup,
+} from './rhythm';
