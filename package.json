@@ -13,7 +13,8 @@
     "e2e": "playwright test",
     "lint": "eslint . && prettier --check . && svelte-check --fail-on-warnings",
     "format": "prettier --write .",
-    "corpus": "node scripts/corpus.mjs"
+    "corpus": "node scripts/corpus.mjs",
+    "sounds": "node scripts/sounds.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -103,3 +103,21 @@ test('Training: Übungen mit Begründung, nach dem Neuladen wieder das Buch', as
   await expect(page.locator('#bookTitle')).toHaveText('Demotext');
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 1 \//);
 });
+
+test('Ton an: Schreibmaschine lädt, Anschläge, Fehler und Abschluss ohne Warnungen', async ({ browser }) => {
+  const page = await browser.newPage();
+  const problems: string[] = [];
+  page.on('pageerror', (e) => problems.push(e.message));
+  page.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && problems.push(m.text()));
+  await seedSettings(page, { strict: true, sound: true, theme: 'light' });
+  const flac = page.waitForResponse((r) => r.url().endsWith('/sounds/hermes.flac'));
+  await openApp(page);
+  await page.locator('#inp').focus();
+  expect((await flac).status()).toBe(200);
+  await page.keyboard.type('#');
+  await page.keyboard.type(asTyped(await sectionText(page)));
+  await expect(page.locator('#resultVeil')).toBeVisible();
+  await page.waitForTimeout(300); // Dekodieren abwarten: ein Fehlschlag würde als Warnung erscheinen
+  expect(problems).toEqual([]);
+  await page.close();
+});

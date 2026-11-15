@@ -30,6 +30,7 @@ export class Typing {
       dialogOpen: () => app.dialogOpen(),
       onFocus: (t) => {
         app.masked = false;
+        app.snd.warmUp();
         this.sess?.resume(t);
       },
       onBlur: (t) => {

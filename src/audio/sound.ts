@@ -1,86 +1,137 @@
-// Synthetische Tippgeräusche über Web Audio (keine Samples, keine Requests).
-export type SoundKind = 'key' | 'space' | 'err' | 'done';
+// Tippgeräusche über Web Audio. Bevorzugt Aufnahmen einer echten Schreibmaschine (public/sounds/, gleiche Herkunft);
+// bis sie geladen sind oder falls das nicht klappt, synthetische Klänge (audio/synth.ts).
+import { DEFAULT_MACHINE, parseMachine, type Machine, type Segment } from './machine';
+import { renderSounds, type SoundKind } from './synth';
+
+export type { SoundKind };
 
 type AudioCtor = typeof AudioContext;
 
+/** Lautstärke der synthetischen Klänge (die Aufnahmen bringen ihren Ausgleich selbst mit) */
+const SYNTH_VOLUME = 0.18;
+/** Abtastrate der vorbereiteten Klänge; der Browser rechnet beim Abspielen bei Bedarf um. */
+const RATE = 48000;
+
+interface Loaded {
+  machine: Machine;
+  buffer: AudioBuffer;
+}
+
 export class Sound {
   private ctx: AudioContext | null = null;
-  private noise: AudioBuffer | null = null;
+  private out: AudioNode | null = null;
+  private synth: Record<SoundKind, AudioBuffer[]> | null = null;
+  private machine: Loaded | null = null;
+  private last: Partial<Record<SoundKind, number>> = {};
 
-  constructor(private readonly enabled: () => boolean) {}
+  constructor(
+    private readonly enabled: () => boolean,
+    private readonly base = import.meta.env.BASE_URL,
+  ) {}
 
+  /**
+   * Klänge vorbereiten, ohne Audio-Kontext: Browser starten ihn erst nach einer Nutzeraktion
+   * (Firefox warnt sonst). Dekodiert wird über einen Offline-Kontext.
+   */
+  private prepare(): void {
+    if (this.synth || typeof AudioBuffer === 'undefined') return;
+    const raw = renderSounds(RATE);
+    const toBuffer = (data: Float32Array): AudioBuffer => {
+      const b = new AudioBuffer({ length: data.length, sampleRate: RATE, numberOfChannels: 1 });
+      b.copyToChannel(data as Float32Array<ArrayBuffer>, 0);
+      return b;
+    };
+    this.synth = {
+      key: raw.key.map(toBuffer),
+      space: raw.space.map(toBuffer),
+      err: raw.err.map(toBuffer),
+      done: raw.done.map(toBuffer),
+    };
+    void this.load(DEFAULT_MACHINE);
+  }
+
+  /** Audio-Kontext anlegen; nur beim Abspielen, also nach einem Tastendruck. */
   private init(): boolean {
+    this.prepare();
     if (this.ctx) return true;
     const AC: AudioCtor | undefined =
       window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext;
-    if (!AC) return false;
-    this.ctx = new AC();
-    const len = Math.floor(this.ctx.sampleRate * 0.035);
-    const b = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-    this.noise = b;
+    if (!AC || !this.synth) return false;
+    const c = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    // Kompressor nur gegen Übersteuern, wenn sich Anschläge überlagern
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -6;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.08;
+    comp.connect(c.destination);
+    this.out = comp;
     return true;
+  }
+
+  /** Aufnahmen einer Maschine laden; bei Fehlern bleibt es still beim synthetischen Klang. */
+  private async load(id: string): Promise<void> {
+    try {
+      const r = await fetch(`${this.base}sounds/${id}.json`);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const machine = parseMachine(await r.json());
+      const f = await fetch(`${this.base}sounds/${machine.file}`);
+      if (!f.ok) throw new Error('HTTP ' + f.status);
+      const decoder = new OfflineAudioContext({ length: 1, sampleRate: RATE, numberOfChannels: 1 });
+      const buffer = await decoder.decodeAudioData(await f.arrayBuffer());
+      this.machine = { machine, buffer };
+    } catch (e) {
+      console.warn('Schreibmaschinenklang nicht verfügbar, synthetischer Klang wird verwendet.', e);
+    }
+  }
+
+  /** Beim Fokus: Klänge vorbereiten und Aufnahmen laden, damit schon der erste Anschlag richtig klingt. */
+  warmUp(): void {
+    if (this.enabled()) this.prepare();
+  }
+
+  /** Zufällige Variante, aber nie zweimal dieselbe hintereinander */
+  private pick(kind: SoundKind, n: number): number {
+    let i = Math.floor(Math.random() * n);
+    if (n > 1 && i === this.last[kind]) i = (i + 1) % n;
+    this.last[kind] = i;
+    return i;
   }
 
   play(kind: SoundKind): void {
     if (!this.enabled() || !this.init()) return;
     const c = this.ctx!;
     if (c.state === 'suspended') void c.resume();
-    const t = c.currentTime;
-    if (kind === 'err') {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(170, t);
-      o.frequency.exponentialRampToValueAtTime(95, t + 0.14);
-      g.gain.setValueAtTime(0.06, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-      o.connect(g);
-      g.connect(c.destination);
-      o.start(t);
-      o.stop(t + 0.18);
-      return;
-    }
-    if (kind === 'done') {
-      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-        const o = c.createOscillator();
-        const g = c.createGain();
-        o.type = 'sine';
-        o.frequency.value = f;
-        const s = t + i * 0.09;
-        g.gain.setValueAtTime(0.0001, s);
-        g.gain.exponentialRampToValueAtTime(0.05, s + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, s + 0.6);
-        o.connect(g);
-        g.connect(c.destination);
-        o.start(s);
-        o.stop(s + 0.65);
-      });
-      return;
-    }
     const src = c.createBufferSource();
-    src.buffer = this.noise;
-    src.playbackRate.value = 0.9 + Math.random() * 0.25;
-    const f = c.createBiquadFilter();
-    f.type = 'bandpass';
-    f.Q.value = 0.9;
-    f.frequency.value = kind === 'space' ? 650 : 1400 + Math.random() * 900;
     const g = c.createGain();
-    g.gain.value = kind === 'space' ? 0.28 : 0.17;
-    src.connect(f);
-    f.connect(g);
-    g.connect(c.destination);
-    src.start(t);
-    const o = c.createOscillator();
-    const g2 = c.createGain();
-    o.type = 'sine';
-    o.frequency.value = kind === 'space' ? 120 : 210;
-    g2.gain.setValueAtTime(0.035, t);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    o.connect(g2);
-    g2.connect(c.destination);
-    o.start(t);
-    o.stop(t + 0.06);
+    const vary = kind === 'key' || kind === 'space' ? 0.85 + Math.random() * 0.15 : 1;
+    let node: AudioNode = src;
+    let segment: Segment | null = null;
+
+    if (this.machine) {
+      const { machine, buffer } = this.machine;
+      src.buffer = buffer;
+      // Vertipper: gedämpfter, tieferer Anschlag wie ein verhakter Typenhebel
+      const list = machine.sounds[kind === 'err' ? 'key' : kind];
+      segment = list[this.pick(kind, list.length)]!;
+      g.gain.value = machine.gain * vary * (kind === 'err' ? 0.8 : 1);
+      if (kind === 'err') {
+        src.playbackRate.value = 0.72;
+        const lp = c.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 1100;
+        src.connect(lp);
+        node = lp;
+      } else src.playbackRate.value = kind === 'done' ? 1 : 0.98 + Math.random() * 0.04;
+    } else {
+      const list = this.synth![kind];
+      src.buffer = list[this.pick(kind, list.length)]!;
+      src.playbackRate.value = kind === 'done' ? 1 : 0.96 + Math.random() * 0.08;
+      g.gain.value = SYNTH_VOLUME * vary;
+    }
+    node.connect(g);
+    g.connect(this.out!);
+    if (segment) src.start(0, segment[0], segment[1]);
+    else src.start();
   }
 }

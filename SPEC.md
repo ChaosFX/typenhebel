@@ -191,6 +191,8 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 ### Phase 4: Gestaltung und Barrierefreiheit
 - **Schrift selbst hosten** (z. B. Literata, OFL-Lizenz, WOFF2 mit Subset für Latein + deutsche Zeichen). Keine Google-Fonts-Einbindung (DSGVO-Abmahnrisiko).
 - Sound: bessere, leise Klang-Samples oder weiterhin synthetisch; Lautstärkeregler; Sound standardmäßig an, aber dezent.
+  - Umgesetzt (2026-11-15, vorgezogen): **Aufnahmen einer echten Schreibmaschine** (Dominik: Synthese klang zu künstlich bzw. „wie Smartphone-Tastaturen“; Hörvergleich, Wahl: Hermes Precisa 305). Quelle BigSoundBank (CC0), dazu Erika 5 von Wikimedia Commons (CC BY 4.0) bereitgelegt, aber noch nicht verwendet. `npm run sounds` schneidet aus den Originalen je Maschine eine FLAC-Datei mit allen Klängen plus Beschreibung (`public/sounds/<id>.json`: Abschnitte, Lautstärkeausgleich, Quelle, Lizenz); Quellen in `public/sounds/QUELLEN.md`. Geladen wird erst, wenn der Ton gebraucht wird (gleiche Herkunft); bis dahin und bei Fehlern synthetischer Klang (`audio/synth.ts`). Vertipper: gedämpfter, tieferer Anschlag. Lautstärkeregler steht noch aus.
+  - Später (Dominik, 2026-11-15): verschiedene Schreibmaschinen zur Auswahl, passend dazu Themen (Klang und Optik). Die Struktur je Maschine ist dafür angelegt; bei der Erika muss die Namensnennung dann in der App erscheinen.
 - Fokus-Modus (alles außer Text ausblenden), Textgröße einstellbar, zusätzlicher Farbmodus (Sepia).
 - `prefers-reduced-motion`, ausreichend Kontrast (WCAG AA für Text), sichtbare Fokusrahmen, sinnvolle ARIA-Rollen für Dialoge.
 - Die Optik darf besser werden, aber Charakter beibehalten: ruhig, warm, buchartig.
