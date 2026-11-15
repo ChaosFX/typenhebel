@@ -71,6 +71,24 @@
    }
   },
   {
+   "id": "c:stevenson-schatzinsel",
+   "file": "stevenson-schatzinsel.json",
+   "title": "Die Schatzinsel",
+   "author": "Robert Louis Stevenson",
+   "chapters": 34,
+   "sections": 589,
+   "words": 71891,
+   "bytes": 464504,
+   "source": {
+    "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
+    "url": "https://www.projekt-gutenberg.org/",
+    "edition": "Hesse und Becker Verlag",
+    "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
+    "retrieved": "2026-11-14"
+   },
+   "note": "Übersetzung: Heinrich Conrad († 1918)"
+  },
+  {
    "id": "c:zweig-welt-von-gestern",
    "file": "zweig-welt-von-gestern.json",
    "title": "Die Welt von Gestern",

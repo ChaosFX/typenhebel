@@ -5,6 +5,7 @@ import { assembleChapters, chapterOf, chapterRange } from '../src/core/book';
 import { findRare } from '../src/core/rare';
 import { wc } from '../src/core/text';
 import { EpubError, readEpub, resolvePath } from '../src/epub/import';
+import { extractChapter } from '../src/epub/xhtml';
 import { CHAPTER_ONE_START, makeEpub } from './fixtures/make-epub';
 
 describe('resolvePath', () => {
@@ -50,6 +51,25 @@ describe('readEpub (synthetisch)', () => {
 
   test('kaputte Dateien werden verständlich abgewiesen', () => {
     expect(() => readEpub(new Uint8Array([1, 2, 3]))).toThrow(EpubError);
+  });
+});
+
+describe('extractChapter: Kapiteltitel', () => {
+  const chapter = (body: string) =>
+    extractChapter(new DOMParser().parseFromString(`<html><body>${body}</body></html>`, 'text/html'), 'Kapitel 9');
+
+  test('erzeugte Nummern-Überschrift weicht der echten, <br> wird zu „ – “', () => {
+    const c = chapter('<h1>Kapitel 3</h1><h4>Zweites Kapitel<br/> <span>Der Schwarze Hund</span></h4><p>Text.</p>');
+    expect(c.title).toBe('Zweites Kapitel – Der Schwarze Hund');
+    expect(c.paragraphs).toEqual(['Text.']);
+    expect(chapter('<h4>Neunzehntes Kapitel<br/>Jim erzählt:<br/>Die Garnison</h4>').title).toBe(
+      'Neunzehntes Kapitel – Jim erzählt: Die Garnison',
+    );
+  });
+
+  test('sonst gilt die erste Überschrift; eine Nummern-Überschrift allein bleibt Titel', () => {
+    expect(chapter('<h1>Erster Teil</h1><h2>Erstes Buch</h2><p>Text.</p>').title).toBe('Erster Teil');
+    expect(chapter('<h1>Kapitel 3</h1><p>Text.</p>').title).toBe('Kapitel 3');
   });
 });
 
