@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { asTyped, sectionText, seedSettings } from './helpers';
+import { asTyped, openApp, sectionText, seedSettings } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await seedSettings(page, { strict: true, sound: false, theme: 'light' });
-  await page.goto('./');
+  await openApp(page);
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 1 \//);
 });
 
@@ -61,7 +61,7 @@ test('Einfügen ist wirkungslos', async ({ page, context, browserName }) => {
 test('Neuladen behält den Fortschritt', async ({ page }) => {
   await page.locator('#next').click();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
-  await page.reload();
+  await openApp(page, true);
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
 });
 

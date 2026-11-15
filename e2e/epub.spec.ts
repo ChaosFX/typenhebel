@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { makeEpub } from '../tests/fixtures/make-epub';
-import { asTyped, sectionText, seedSettings } from './helpers';
+import { asTyped, openApp, sectionText, seedSettings } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await seedSettings(page, { strict: true, sound: false, theme: 'light' });
-  await page.goto('./');
+  await openApp(page);
 });
 
 async function upload(page: Page, name: string, buffer: Buffer): Promise<void> {
@@ -45,7 +45,7 @@ test('EPUB importieren: Kapitel, Motto, Fußnoten, seltene Zeichen', async ({ pa
   await expect(page.locator('#inp')).toBeFocused();
 
   // Fortschritt bleibt nach Neuladen
-  await page.reload();
+  await openApp(page, true);
   await expect(page.locator('#chapSel')).toHaveValue('2');
   await expect(page.locator('#chapSel option').first()).toHaveText('✓ Motto · 1/1');
 });
@@ -77,7 +77,7 @@ test('Die Welt von Gestern: ganzes Buch passt in den Speicher', async ({ page })
   expect((await sectionText(page)).startsWith('Ich habe meiner Person niemals so viel Wichtigkeit beigemessen')).toBe(
     true,
   );
-  await page.reload();
+  await openApp(page, true);
   await expect(page.locator('#chapSel option')).toHaveCount(18);
   await expect(page.locator('#chapSel')).toHaveValue('1');
 });
