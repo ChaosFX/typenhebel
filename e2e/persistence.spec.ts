@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { makeEpub } from '../tests/fixtures/make-epub';
-import { asTyped, sectionText, seedSettings } from './helpers';
+import { asTyped, openApp, sectionText, seedSettings } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await seedSettings(page, { strict: true, sound: false, theme: 'light' });
@@ -64,7 +64,7 @@ async function seedLegacy(page: Page, sessions: number): Promise<void> {
 
 test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }) => {
   await seedLegacy(page, 3);
-  await page.goto('./');
+  await openApp(page);
   await expect(page.locator('#bookTitle')).toHaveText('Altes Buch');
   await expect(page.locator('#secInfo')).toHaveText('Abschnitt 3 / 3');
   const keys = await page.evaluate(() => Object.keys(localStorage).sort());
@@ -75,7 +75,7 @@ test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }
   await expect(page.locator('#profBody tbody tr')).toHaveCount(3);
   await page.locator('#profClose').click();
 
-  await page.reload();
+  await openApp(page, true);
   await expect(page.locator('#bookTitle')).toHaveText('Altes Buch');
   await page.locator('#libBtn').click();
   await expect(page.locator('.shelf-item.current')).toContainText('Altes Buch');
@@ -91,7 +91,7 @@ async function openFromLibrary(page: Page, title: string): Promise<void> {
 }
 
 test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await page.locator('#next').click();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
 
@@ -120,7 +120,7 @@ test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async 
   await expect(page.locator('#libDlg')).toBeVisible();
   await page.locator('#shelf .shelf-item', { hasText: 'Testbuch' }).locator('.cover').click();
   await expect(page.locator('#chapSel')).toBeVisible();
-  await page.reload();
+  await openApp(page, true);
   await expect(page.locator('#bookTitle')).toHaveText('Testbuch');
 
   // Löschen: Demotext öffnet sich wieder
@@ -132,7 +132,7 @@ test('Bibliothek: Bücher wechseln, Stelle merken, Text laden, löschen', async 
 });
 
 test('Cover wechseln: Layout, Farbe, Würfeln, Standard – bleibt nach Neuladen', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await page.locator('#libBtn').click();
   const cover = page.locator('.shelf-item.current .cover');
   const before = await cover.innerHTML();
@@ -151,7 +151,7 @@ test('Cover wechseln: Layout, Farbe, Würfeln, Standard – bleibt nach Neuladen
   await expect(cover).not.toHaveJSProperty('innerHTML', before);
   expect(await cover.innerHTML()).toBe(chosen);
 
-  await page.reload();
+  await openApp(page, true);
   await page.locator('#libBtn').click();
   expect(await page.locator('.shelf-item.current .cover').innerHTML()).toBe(chosen);
 
@@ -165,7 +165,7 @@ test('Cover wechseln: Layout, Farbe, Würfeln, Standard – bleibt nach Neuladen
 });
 
 test('Export und Import: Rundreise in einen leeren Browser', async ({ page, browser }) => {
-  await page.goto('./');
+  await openApp(page);
   await importEpub(page);
   await typeSection(page);
   await page.keyboard.press('Enter');
@@ -185,7 +185,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   const ctx = await browser.newContext();
   const other = await ctx.newPage();
   await seedSettings(other, { strict: true, sound: false, theme: 'light' });
-  await other.goto('./');
+  await openApp(other);
   await other.locator('#profBtn').click();
   await other.locator('#profFile').setInputFiles(file);
   await expect(other.locator('#profMsg')).toHaveText('1 Abschnitt übernommen, 1 Buch.');
@@ -200,7 +200,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
 });
 
 test('ungültige Sicherung wird abgewiesen', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await page.locator('#profBtn').click();
   await page
     .locator('#profFile')
@@ -211,7 +211,7 @@ test('ungültige Sicherung wird abgewiesen', async ({ page }) => {
 
 test('Erinnerung zum Sichern nach 30 Abschnitten', async ({ page }) => {
   await seedLegacy(page, 29);
-  await page.goto('./');
+  await openApp(page);
   await openFromLibrary(page, 'Demotext');
   await typeSection(page);
   await expect(page.locator('#resRemind')).toContainText('30 Abschnitte');
@@ -222,7 +222,7 @@ test('Erinnerung zum Sichern nach 30 Abschnitten', async ({ page }) => {
 });
 
 test('Mitgelieferte Bücher: mit einem Klick laden, löschen, Fehler', async ({ page }) => {
-  await page.goto('./');
+  await openApp(page);
   await page.locator('#libBtn').click();
   await expect(page.locator('#availH')).toBeVisible();
   const faust = page.locator('#avail .shelf-item', { hasText: 'Faust' });
@@ -236,7 +236,7 @@ test('Mitgelieferte Bücher: mit einem Klick laden, löschen, Fehler', async ({ 
   await expect(page.locator('#chapSel option').first()).toHaveText(/^Zueignung/);
   expect((await sectionText(page)).startsWith('Ihr naht euch wieder, schwankende Gestalten')).toBe(true);
 
-  await page.reload();
+  await openApp(page, true);
   await page.locator('#libBtn').click();
   await expect(page.locator('#shelf .shelf-item.current')).toContainText('Quelle: Projekt Gutenberg-DE');
   await expect(page.locator('#avail .shelf-item')).toHaveCount(n - 1);

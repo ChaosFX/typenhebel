@@ -107,6 +107,8 @@ class AppState {
   readonly snd = new Sound(() => this.settings.sound);
   private saveWarned = false;
   private openSeq = 0;
+  /** Gespeicherter Stand geladen, das erste Buch wird geöffnet */
+  private started = false;
 
   allBooks = $derived<BookMeta[]>([DEMO_META, ...this.books]);
   exportDue = $derived(this.sessions.length - this.exportedAtSessions >= EXPORT_REMINDER);
@@ -224,6 +226,7 @@ class AppState {
   // ---------- Abschnitte ----------
   /** Aktuellen Abschnitt (neu) beginnen. */
   restart(): void {
+    if (!this.sess && !this.started) return; // vor dem Laden des Stands nichts überschreiben
     this.result = null;
     this.sess = new Session(this.book.sections[this.secIdx]!.text, { strict: this.settings.strict });
     if (this.progressOf(this.book.id).section !== this.secIdx)
@@ -364,6 +367,7 @@ class AppState {
         'Dieser Browser erlaubt keine dauerhafte Speicherung (IndexedDB). Fortschritt und Profil gehen beim Schließen verloren.',
       );
     }
+    this.started = true;
     await this.openBook(current ?? DEMO.id);
     if (!document.hasFocus()) this.masked = true;
   }

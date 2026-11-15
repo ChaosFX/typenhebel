@@ -37,6 +37,9 @@
     document.documentElement.dataset.theme = app.settings.theme;
   });
 
+  // Bis der gespeicherte Stand geladen ist, bleibt die Kopfzeile leer (sonst wirkt die App schon bedienbar).
+  const ready = $derived(app.sess !== null);
+
   /** Kapitelauswahl: Titel, Häkchen und Stand je Kapitel */
   const chapters = $derived.by(() => {
     const b = app.book;
@@ -116,8 +119,8 @@
   <header class="top">
     <div class="book">
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Bibliothek ist auch per Knopf erreichbar) -->
-      <div class="bt" id="bookTitle" onclick={() => (app.libOpen = true)}>{app.book.title}</div>
-      <div class="ba" id="bookAuthor">{app.book.author || ''}</div>
+      <div class="bt" id="bookTitle" onclick={() => (app.libOpen = true)}>{ready ? app.book.title : ''}</div>
+      <div class="ba" id="bookAuthor">{ready ? app.book.author || '' : ''}</div>
     </div>
     <nav class="nav" aria-label="Abschnitte">
       <select
@@ -136,7 +139,7 @@
       <button id="prev" title="Vorheriger Abschnitt" aria-label="Vorheriger Abschnitt" onclick={() => app.go(-1)}
         >‹</button
       >
-      <span id="secInfo">Abschnitt {app.sectionPos[0]} / {app.sectionPos[1]}</span>
+      <span id="secInfo">{ready ? `Abschnitt ${app.sectionPos[0]} / ${app.sectionPos[1]}` : ''}</span>
       <button id="next" title="Nächster Abschnitt" aria-label="Nächster Abschnitt" onclick={() => app.go(1)}>›</button>
     </nav>
     <div class="tools">
