@@ -58,6 +58,8 @@ const FOOTNOTE_MARK = /^\W*[\d*†‡]+\W*$/u;
 const FRONT_TITLES = /^(titelseite|titelblatt|titel|title ?page|impressum|inhalt|inhaltsverzeichnis|cover|copyright)$/i;
 const FRONT_TYPES = /\b(titlepage|cover|copyright-page|toc|frontmatter|colophon|imprint)\b/;
 const MOTTO_CLASSES = /\b(motto|epigraph)\b/i;
+/** Von Konvertern erzeugte Nummern-Überschriften („Kapitel 3“) – nur Titel, wenn es keine bessere gibt. */
+const GENERIC_HEADING = /^(kapitel|chapter)\s+\d+$/i;
 
 const epubType = (el: Element): string => el.getAttributeNS(OPS_NS, 'type') ?? el.getAttribute('epub:type') ?? '';
 
@@ -76,6 +78,23 @@ const isMotto = (el: Element): boolean =>
   MOTTO_CLASSES.test(el.getAttribute('class') ?? '') || /\bepigraph\b/.test(epubType(el));
 
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
+
+/** Überschriftentext; Zeilenumbrüche (<br>) trennen Zeilen mit „ – “ (nach Doppelpunkt nur Leerzeichen). */
+function headingText(el: Element): string {
+  const lines: string[] = [''];
+  const walk = (node: Node): void => {
+    if (node.nodeType === 3 || node.nodeType === 4) lines[lines.length - 1] += node.nodeValue ?? '';
+    else if (node.nodeType === 1 && !skipElement(node as Element)) {
+      if ((node as Element).localName.toLowerCase() === 'br') lines.push('');
+      else for (let c = node.firstChild; c; c = c.nextSibling) walk(c);
+    }
+  };
+  walk(el);
+  return lines
+    .map(squash)
+    .filter(Boolean)
+    .reduce((a, l) => (a ? a + (a.endsWith(':') ? ' ' : ' – ') + l : l), '');
+}
 
 /**
  * Kapitel aus einem geparsten XHTML-Dokument lesen.
@@ -112,7 +131,7 @@ export function extractChapter(doc: Document, fallbackTitle: string): RawChapter
     }
     if (HEADINGS.has(tag)) {
       flush();
-      const h = squash(el.textContent ?? '');
+      const h = headingText(el);
       if (h) headings.push(h);
       return;
     }
@@ -129,7 +148,7 @@ export function extractChapter(doc: Document, fallbackTitle: string): RawChapter
   flush();
 
   const docTitle = squash(doc.getElementsByTagName('title')[0]?.textContent ?? '');
-  const title = headings[0] ?? (docTitle || fallbackTitle);
+  const title = headings.find((h) => !GENERIC_HEADING.test(h)) ?? headings[0] ?? (docTitle || fallbackTitle);
   const front =
     FRONT_TITLES.test(title) || FRONT_TYPES.test(epubType(body)) || FRONT_TYPES.test(epubType(doc.documentElement));
   if (front) return { title: mottos.length ? 'Motto' : title, paragraphs: mottos };
