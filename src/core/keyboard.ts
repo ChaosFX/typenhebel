@@ -159,7 +159,7 @@ const stroke = (key: Key, layer: 0 | 1 | 2, dead = false): Stroke => ({
 /** Zeichen → direkter Tastendruck (ohne Tottasten-Kombinationen) */
 const DIRECT = new Map<string, Stroke>([[' ', stroke(SPACE, 0)]]);
 ROWS.forEach((r, row) =>
-  r.keys.forEach((k, i) => {
+  r.keys.forEach((k) => {
     const key = KEYS.find((x) => x.row === row && x.base === k[0])!;
     k.forEach((ch, layer) => {
       if (ch) DIRECT.set(ch, stroke(key, layer as 0 | 1 | 2, DEAD.has(ch)));
