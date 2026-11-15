@@ -58,3 +58,4 @@ export {
   type Row,
   type Stroke,
 } from './keyboard';
+export { classifyErrors, countErrorKinds, ERROR_KIND_NAMES, type ClassifiedError, type ErrorKind } from './errors';
