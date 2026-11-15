@@ -8,6 +8,7 @@
   import FingerStats from './FingerStats.svelte';
   import KeyMap from './KeyMap.svelte';
   import Insights from './Insights.svelte';
+  import RhythmStats from './RhythmStats.svelte';
   import Modal from './Modal.svelte';
 
   let fileInput: HTMLInputElement;
@@ -97,6 +98,7 @@
           <ErrorKinds sessions={app.profOpen ? app.sessions : []} />
         </div>
       {/if}
+      {#if app.profOpen && app.sessions.length}<RhythmStats sessions={app.sessions} />{/if}
       <h3 style="margin-top:1.4rem">Letzte Abschnitte</h3>
       {#if last.length}
         <table id="profHist">

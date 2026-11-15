@@ -23,6 +23,8 @@ test('Abschnitt komplett tippen führt zum Ergebnis', async ({ page }) => {
   await expect(page.locator('.finger-table tbody tr').first()).toContainText('Kleiner Finger links');
   await expect(page.locator('.finger-table')).toContainText('Hand rechts');
   await expect(page.locator('.error-kinds')).toContainText('letzte 1 Abschnitt, 0 Fehler');
+  await expect(page.locator('.rhythm')).toContainText('Rhythmus · letzte 1 Abschnitt');
+  await expect(page.locator('.rhythm')).toContainText('Der Verlauf erscheint ab dem zweiten Übungstag.');
 });
 
 test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {
