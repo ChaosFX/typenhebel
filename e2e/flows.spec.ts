@@ -81,3 +81,25 @@ test('Logo und Favicons sind eingebunden', async ({ page, request }) => {
   expect(icons).toHaveLength(3);
   for (const href of icons) expect((await request.get(href)).status()).toBe(200);
 });
+
+test('Training: Übungen mit Begründung, nach dem Neuladen wieder das Buch', async ({ page }) => {
+  await expect(page.locator('#loadBtn')).toHaveCount(0); // Laden geht über die Bibliothek
+  await page.locator('#trainBtn').click();
+  await expect(page.locator('#bookTitle')).toHaveText('Training');
+  await expect(page.locator('#bookAuthor')).toHaveText(/^(Wort-Drill „.+“ – weil |Sätze mit „)/);
+  const n = Number((await page.locator('#secInfo').textContent())!.match(/\/ (\d+)/)![1]);
+  expect(n).toBeGreaterThanOrEqual(2);
+  await page.keyboard.type(asTyped(await sectionText(page)));
+  await expect(page.locator('#resTitle')).toHaveText('Abschnitt geschafft');
+  await expect(page.locator('#resultCard .sub')).toHaveText(`Training · Abschnitt 1 von ${n}`);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#secInfo')).toHaveText(`Abschnitt 2 / ${n}`);
+
+  await page.locator('#profBtn').click();
+  await expect(page.locator('#profHist tbody tr').first()).toContainText('Training · 1');
+  await page.locator('#profClose').click();
+
+  await openApp(page, true);
+  await expect(page.locator('#bookTitle')).toHaveText('Demotext');
+  await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 1 \//);
+});

@@ -1,6 +1,11 @@
 // Zentraler Zustand der App (Svelte-Runes). Die Komponenten lesen ihn direkt, Änderungen laufen über die Methoden.
 import {
   analyze,
+  analyzeFingers,
+  analyzeRhythm,
+  buildTraining,
+  DEFAULT_TARGETS,
+  trainingTargets,
   chapterOf,
   chapterRange,
   emptyProfile,
@@ -55,6 +60,10 @@ export interface ResultInfo {
 }
 
 export const DEMO_META = bookMeta(DEMO);
+/** Das Training ist ein erzeugtes Buch: nicht gespeichert, ohne Fortschritt, wird nach dem letzten Abschnitt neu gebaut. */
+export const TRAINING_ID = 'training';
+/** Höchstzahl an Abschnitten, aus denen Übungen gesucht werden (große Bücher werden zufällig ausgedünnt). */
+const TRAINING_POOL = 4000;
 
 /** Hinweis bei Speicherfehlern – nie still Daten verlieren. */
 export function storageWarning(e: unknown): string {
@@ -229,13 +238,17 @@ class AppState {
     if (!this.sess && !this.started) return; // vor dem Laden des Stands nichts überschreiben
     this.result = null;
     this.sess = new Session(this.book.sections[this.secIdx]!.text, { strict: this.settings.strict });
-    if (this.progressOf(this.book.id).section !== this.secIdx)
+    if (this.book.id !== TRAINING_ID && this.progressOf(this.book.id).section !== this.secIdx)
       this.saveProgress(this.book.id, { section: this.secIdx });
     if (!this.saveWarned) this.hint = '';
   }
 
   go(d: number): void {
     const n = this.book.sections.length;
+    if (this.book.id === TRAINING_ID && d > 0 && this.secIdx + d >= n) {
+      void this.openTraining(); // Runde geschafft: neues Training aus dem aktuellen Stand
+      return;
+    }
     this.secIdx = (this.secIdx + d + n) % n;
     this.restart();
   }
@@ -275,10 +288,11 @@ class AppState {
     this.persist((d) => addSession(d, rec, profile));
     const ds = this.doneSet(book.id);
     ds.add(this.secIdx);
-    this.saveProgress(book.id, {
-      section: (this.secIdx + 1) % book.sections.length,
-      done: [...ds].sort((a, b) => a - b),
-    });
+    if (book.id !== TRAINING_ID)
+      this.saveProgress(book.id, {
+        section: (this.secIdx + 1) % book.sections.length,
+        done: [...ds].sort((a, b) => a - b),
+      });
     this.snd.play('done');
     const [k, n] = this.sectionPos;
     const chapter = hasChapters(book) ? ` · ${book.chapters![chapterOf(book, this.secIdx)]!.title}` : '';
@@ -291,6 +305,51 @@ class AppState {
       analysis: analyze(profile),
       profileSessions: profile.sessions,
     };
+  }
+
+  // ---------- Training ----------
+  training = $state(false);
+
+  /** Training aus den aktuellen Auswertungen und den eigenen Texten bauen und öffnen. */
+  async openTraining(): Promise<void> {
+    if (this.training) return;
+    this.training = true;
+    try {
+      const seq = ++this.openSeq;
+      const targets = trainingTargets(
+        analyze(this.profile),
+        analyzeFingers(this.profile),
+        analyzeRhythm(this.sessions),
+      );
+      const paras = await this.trainingTexts();
+      const sections = buildTraining(targets.length ? targets : DEFAULT_TARGETS, paras);
+      if (seq !== this.openSeq || !sections.length) return;
+      this.book = { id: TRAINING_ID, title: 'Training', author: '', sections };
+      this.secIdx = 0;
+      this.restart();
+    } finally {
+      this.training = false;
+    }
+  }
+
+  /** Abschnittstexte aller Bücher (Demotext eingeschlossen), bei sehr vielen zufällig ausgedünnt. */
+  private async trainingTexts(): Promise<string[]> {
+    const texts = DEMO.sections.map((s) => s.text);
+    if (this.db)
+      for (const b of this.books) {
+        try {
+          const secs = await getSections(this.db, b.id);
+          for (const s of secs ?? []) texts.push(s.text);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    if (texts.length <= TRAINING_POOL) return texts;
+    for (let i = texts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [texts[i], texts[j]] = [texts[j]!, texts[i]!];
+    }
+    return texts.slice(0, TRAINING_POOL);
   }
 
   // ---------- Fokus ----------

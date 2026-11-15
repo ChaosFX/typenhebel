@@ -97,13 +97,13 @@
         </svg>
         Bibliothek
       </button>
-      <button id="loadBtn" onclick={() => (app.loadOpen = true)}>
+      <button id="trainBtn" disabled={app.training} onclick={() => void app.openTraining()}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 4v11" />
-          <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
-          <path d="M4 16v2.5c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5V16" />
+          <circle cx="12" cy="12" r="8" />
+          <circle cx="12" cy="12" r="4.2" />
+          <path d="M12 12h0.01" />
         </svg>
-        Text laden
+        Training
       </button>
       <button id="profBtn" onclick={() => (app.profOpen = true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -120,7 +120,9 @@
     <div class="book">
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (Bibliothek ist auch per Knopf erreichbar) -->
       <div class="bt" id="bookTitle" onclick={() => (app.libOpen = true)}>{ready ? app.book.title : ''}</div>
-      <div class="ba" id="bookAuthor">{ready ? app.book.author || '' : ''}</div>
+      <div class="ba" id="bookAuthor">
+        {ready ? (app.book.sections[app.secIdx]?.note ?? app.book.author) || '' : ''}
+      </div>
     </div>
     <nav class="nav" aria-label="Abschnitte">
       <select

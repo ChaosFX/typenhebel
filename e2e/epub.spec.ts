@@ -9,7 +9,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function upload(page: Page, name: string, buffer: Buffer): Promise<void> {
-  await page.locator('#loadBtn').click();
+  await page.locator('#libBtn').click();
+  await page.locator('#libLoad').click();
   await page.locator('#ldFile').setInputFiles({ name, mimeType: 'application/epub+zip', buffer });
 }
 
