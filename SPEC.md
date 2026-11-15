@@ -142,7 +142,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - Einfügen, Drop, Wortlöschen (Strg+Rücktaste) und Zeilenumbruch blockieren.
 - **Blur = Pause**, Fokus = Fortsetzen; das erste Intervall nach Pause ist `null`.
 - Tippen über das Textende hinaus ignorieren; im freien Modus Hinweis anzeigen, wenn noch Fehler vorhanden sind.
-- **Testmatrix**: Firefox unter Linux (Fedora, Hauptplattform) und Windows (beruflich), jeweils mit deutschem Layout, Standard-ISO-Tastatur; dazu Chrome/Edge und Safari (macOS). Automatisiert laufen die E2E-Tests in Chromium und Firefox. Geprüft wird jeweils mit deutscher Tastatur inkl. Tottasten, `ß`, `ä ö ü`, `Shift`-Zeichen, `AltGr`-Zeichen (`@ € { }`). Diese Prüfung kann Claude Code nicht vollständig automatisieren. Dominik testet manuell, Claude Code liefert dafür eine kurze Checkliste.
+- **Testmatrix**: Firefox unter Linux (Fedora, Hauptplattform) und Edge unter Windows (beruflich), jeweils deutsches Layout auf Standard-ISO-Tastatur (großes Enter, `<>|` rechts neben der linken Umschalttaste); dazu Chrome/Edge und Safari (macOS). Automatisiert laufen die E2E-Tests in Chromium und Firefox. Geprüft wird jeweils mit deutscher Tastatur inkl. Tottasten, `ß`, `ä ö ü`, `Shift`-Zeichen, `AltGr`-Zeichen (`@ € { }`). Diese Prüfung kann Claude Code nicht vollständig automatisieren. Dominik testet manuell, Claude Code liefert dafür eine kurze Checkliste.
 
 ---
 
@@ -176,6 +176,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 
 ### Phase 3: Analyse v2 und adaptives Training
 - `keyboard.ts`: QWERTZ-Zuordnung Zeichen → Finger/Hand/Reihe, Nachbartasten, Shift-Seite.
+  - Umgesetzt (2026-11-15): deutsche ISO-Tastatur (T1), Fingerzuordnung nach Zehnfingersystem; `6` gehört zum linken Zeigefinger, die Umschalttaste drückt immer die andere Hand, AltGr-Zeichen und Tottasten (`^ ´ \``, Akzentbuchstaben als Tottaste + Buchstabe) sind abgebildet, typografische Zeichen laufen über ihre Tastatur-Entsprechung (`„` → `"`). Nicht direkt tippbare Zeichen (z. B. `ç`, `ñ`) liefern `null`.
 - **Fehlerarten** klassifizieren: Nachbartaste getroffen, Vertauschung zweier Zeichen, Auslassung, Doppelanschlag, Groß-/Kleinschreibung (Shift), Umlaut-Fehler.
 - Auswertungen: Tempo und Fehler **pro Finger/Hand**, langsame **Trigramme** und **Wortanfänge/-enden**, **Post-Error-Slowing** (Verlangsamung nach Fehlern), **Ermüdung** (Verlauf innerhalb der Session), Trend über Tage.
 - Statistik robust halten: Median statt Mittel wo möglich, **Glättung der Fehlerraten** (z. B. Wilson-Intervall oder Beta-Prior), Mindeststichproben, Hinweise „vorläufig“ bei geringer Datenlage. Keine Aussage ohne Datenbasis.
@@ -237,7 +238,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 4. ~~**Standardmodus**~~ → entschieden: **Strikt** (2026-11-14).
 5. ~~**Sound-Default**~~ → entschieden: **an** (2026-11-14).
 6. ~~**Veröffentlichung**~~ → entschieden: **öffentlich**, Repo ChaosFX/typenhebel, GitHub Pages.
-7. ~~**Plattform des Alltags-Tests**~~ → entschieden: Fedora Linux + Firefox, beruflich Windows; immer deutsches Layout (2026-11-15, siehe §6).
+7. ~~**Plattform des Alltags-Tests**~~ → entschieden: Fedora + Firefox, beruflich Windows + Edge; deutsches Layout auf Standard-ISO-Tastatur (2026-11-15, siehe §6).
 
 ---
 

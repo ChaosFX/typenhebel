@@ -42,3 +42,19 @@ export {
   type CoverChoice,
   type Layout,
 } from './cover';
+export {
+  adjacent,
+  areNeighbors,
+  FINGER_NAMES,
+  HAND_NAMES,
+  KEYS,
+  keyOf,
+  neighbors,
+  SPACE,
+  strokesFor,
+  type Finger,
+  type Hand,
+  type Key,
+  type Row,
+  type Stroke,
+} from './keyboard';
