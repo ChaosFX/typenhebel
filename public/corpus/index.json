@@ -19,6 +19,24 @@
    "note": "Übersetzung: H. Röhl (Hermann Röhl † 1923 bzw. Hans Röhl † 1945)"
   },
   {
+   "id": "c:melville-moby-dick",
+   "file": "melville-moby-dick.json",
+   "title": "Moby Dick oder Der weiße Wal",
+   "author": "Herman Melville",
+   "chapters": 66,
+   "sections": 671,
+   "words": 86522,
+   "bytes": 573750,
+   "source": {
+    "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
+    "url": "https://www.projekt-gutenberg.org/",
+    "edition": "Verlag von Th. Knaur Nachf.",
+    "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
+    "retrieved": "2026-11-14"
+   },
+   "note": "Übersetzung: Wilhelm Strüver (1927/28)"
+  },
+  {
    "id": "c:goethe-faust",
    "file": "goethe-faust.json",
    "title": "Faust: Eine Tragödie",
