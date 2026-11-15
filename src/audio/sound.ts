@@ -11,6 +11,11 @@ type AudioCtor = typeof AudioContext;
 const SYNTH_VOLUME = 0.18;
 /** Abtastrate der vorbereiteten Klänge; der Browser rechnet beim Abspielen bei Bedarf um. */
 const RATE = 48000;
+/** Vertipper aus zwei Anschlägen: [Verzögerung s, Tempo, Tiefpass Hz, Lautstärke] */
+const ERR_KNOCKS: [number, number, number, number][] = [
+  [0, 0.82, 2500, 1.9],
+  [0.05, 0.78, 2000, 1.4],
+];
 
 interface Loaded {
   machine: Machine;
@@ -102,36 +107,51 @@ export class Sound {
     if (!this.enabled() || !this.init()) return;
     const c = this.ctx!;
     if (c.state === 'suspended') void c.resume();
-    const src = c.createBufferSource();
-    const g = c.createGain();
     const vary = kind === 'key' || kind === 'space' ? 0.85 + Math.random() * 0.15 : 1;
-    let node: AudioNode = src;
-    let segment: Segment | null = null;
 
     if (this.machine) {
       const { machine, buffer } = this.machine;
-      src.buffer = buffer;
-      // Vertipper: gedämpfter, tieferer Anschlag wie ein verhakter Typenhebel
       const list = machine.sounds[kind === 'err' ? 'key' : kind];
-      segment = list[this.pick(kind, list.length)]!;
-      g.gain.value = machine.gain * vary * (kind === 'err' ? 0.8 : 1);
+      const seg = list[this.pick(kind, list.length)]!;
       if (kind === 'err') {
-        src.playbackRate.value = 0.72;
-        const lp = c.createBiquadFilter();
-        lp.type = 'lowpass';
-        lp.frequency.value = 1100;
-        src.connect(lp);
-        node = lp;
-      } else src.playbackRate.value = kind === 'done' ? 1 : 0.98 + Math.random() * 0.04;
-    } else {
-      const list = this.synth![kind];
-      src.buffer = list[this.pick(kind, list.length)]!;
-      src.playbackRate.value = kind === 'done' ? 1 : 0.96 + Math.random() * 0.08;
-      g.gain.value = SYNTH_VOLUME * vary;
+        // Vertipper: zwei gedämpfte, tiefere Anschläge kurz hintereinander, wie ein verhakter Typenhebel.
+        // Gemessen etwa so laut wie ein normaler Anschlag, aber dunkler.
+        for (const [at, rate, cutoff, gain] of ERR_KNOCKS)
+          this.sample(buffer, seg, machine.gain * gain, rate, cutoff, at);
+        return;
+      }
+      this.sample(buffer, seg, machine.gain * vary, kind === 'done' ? 1 : 0.98 + Math.random() * 0.04);
+      return;
+    }
+    const list = this.synth![kind];
+    this.sample(
+      list[this.pick(kind, list.length)]!,
+      null,
+      SYNTH_VOLUME * vary,
+      kind === 'done' ? 1 : 0.96 + Math.random() * 0.08,
+    );
+  }
+
+  /** Puffer (oder Abschnitt daraus) abspielen, optional gedämpft und verzögert */
+  private sample(buffer: AudioBuffer, seg: Segment | null, gain: number, rate: number, cutoff = 0, delay = 0): void {
+    const c = this.ctx!;
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = rate;
+    const g = c.createGain();
+    g.gain.value = gain;
+    let node: AudioNode = src;
+    if (cutoff) {
+      const lp = c.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = cutoff;
+      src.connect(lp);
+      node = lp;
     }
     node.connect(g);
     g.connect(this.out!);
-    if (segment) src.start(0, segment[0], segment[1]);
-    else src.start();
+    const at = c.currentTime + delay;
+    if (seg) src.start(at, seg[0], seg[1]);
+    else src.start(at);
   }
 }
