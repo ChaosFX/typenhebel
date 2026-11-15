@@ -191,6 +191,7 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 ### Phase 4: Gestaltung und Barrierefreiheit
 - **Schrift selbst hosten** (z. B. Literata, OFL-Lizenz, WOFF2 mit Subset für Latein + deutsche Zeichen). Keine Google-Fonts-Einbindung (DSGVO-Abmahnrisiko).
 - Sound: bessere, leise Klang-Samples oder weiterhin synthetisch; Lautstärkeregler; Sound standardmäßig an, aber dezent.
+  - Umgesetzt (2026-11-15, vorgezogen): Schreibmaschinenklang per Modalsynthese (`audio/synth.ts`, Dominik: „Schreibmaschine“, alter Klang „künstlich, bei schnellem Tippen bleibt nur Rauschen“). Anschlag = Walzenschlag + Typenhebel-Klacken (gedämpfte Eigenfrequenzen) + Ticken der Wagenschaltung; Leertaste ohne Typenhebel; Fehler als dumpfes Doppelklopfen statt Piepton; Abschnittsende als kleine Glocke. Einmal vorberechnet (8 Varianten je Anschlag, ~20 ms), Kompressor gegen Übersteuern. Lautstärkeregler steht noch aus.
 - Fokus-Modus (alles außer Text ausblenden), Textgröße einstellbar, zusätzlicher Farbmodus (Sepia).
 - `prefers-reduced-motion`, ausreichend Kontrast (WCAG AA für Text), sichtbare Fokusrahmen, sinnvolle ARIA-Rollen für Dialoge.
 - Die Optik darf besser werden, aber Charakter beibehalten: ruhig, warm, buchartig.

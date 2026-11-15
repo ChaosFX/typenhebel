@@ -1,11 +1,18 @@
-// Synthetische Tippgeräusche über Web Audio (keine Samples, keine Requests).
-export type SoundKind = 'key' | 'space' | 'err' | 'done';
+// Tippgeräusche über Web Audio: einmal berechnete Schreibmaschinenklänge (audio/synth.ts), keine Samples, keine Requests.
+import { renderSounds, type SoundKind } from './synth';
+
+export type { SoundKind };
 
 type AudioCtor = typeof AudioContext;
 
+/** Gesamtlautstärke: dezent, Spitzen fängt der Kompressor ab. */
+const VOLUME = 0.18;
+
 export class Sound {
   private ctx: AudioContext | null = null;
-  private noise: AudioBuffer | null = null;
+  private out: AudioNode | null = null;
+  private buffers: Record<SoundKind, AudioBuffer[]> | null = null;
+  private last = -1;
 
   constructor(private readonly enabled: () => boolean) {}
 
@@ -14,73 +21,53 @@ export class Sound {
     const AC: AudioCtor | undefined =
       window.AudioContext ?? (window as unknown as { webkitAudioContext?: AudioCtor }).webkitAudioContext;
     if (!AC) return false;
-    this.ctx = new AC();
-    const len = Math.floor(this.ctx.sampleRate * 0.035);
-    const b = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-    this.noise = b;
+    const c = (this.ctx = new AC({ latencyHint: 'interactive' }));
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -14;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.08;
+    const gain = c.createGain();
+    gain.gain.value = VOLUME;
+    gain.connect(comp);
+    comp.connect(c.destination);
+    this.out = gain;
+    const raw = renderSounds(c.sampleRate);
+    const toBuffer = (data: Float32Array): AudioBuffer => {
+      const b = c.createBuffer(1, data.length, c.sampleRate);
+      b.copyToChannel(data as Float32Array<ArrayBuffer>, 0);
+      return b;
+    };
+    this.buffers = {
+      key: raw.key.map(toBuffer),
+      space: raw.space.map(toBuffer),
+      err: raw.err.map(toBuffer),
+      done: raw.done.map(toBuffer),
+    };
     return true;
+  }
+
+  /** Kontext schon beim Fokus anlegen, damit der erste Anschlag nicht verzögert klingt. */
+  warmUp(): void {
+    if (this.enabled()) this.init();
   }
 
   play(kind: SoundKind): void {
     if (!this.enabled() || !this.init()) return;
     const c = this.ctx!;
     if (c.state === 'suspended') void c.resume();
-    const t = c.currentTime;
-    if (kind === 'err') {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(170, t);
-      o.frequency.exponentialRampToValueAtTime(95, t + 0.14);
-      g.gain.setValueAtTime(0.06, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-      o.connect(g);
-      g.connect(c.destination);
-      o.start(t);
-      o.stop(t + 0.18);
-      return;
-    }
-    if (kind === 'done') {
-      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-        const o = c.createOscillator();
-        const g = c.createGain();
-        o.type = 'sine';
-        o.frequency.value = f;
-        const s = t + i * 0.09;
-        g.gain.setValueAtTime(0.0001, s);
-        g.gain.exponentialRampToValueAtTime(0.05, s + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, s + 0.6);
-        o.connect(g);
-        g.connect(c.destination);
-        o.start(s);
-        o.stop(s + 0.65);
-      });
-      return;
-    }
+    const list = this.buffers![kind];
+    // Zufällige Variante, aber nie zweimal dieselbe hintereinander
+    let i = Math.floor(Math.random() * list.length);
+    if (list.length > 1 && i === this.last) i = (i + 1) % list.length;
+    this.last = i;
     const src = c.createBufferSource();
-    src.buffer = this.noise;
-    src.playbackRate.value = 0.9 + Math.random() * 0.25;
-    const f = c.createBiquadFilter();
-    f.type = 'bandpass';
-    f.Q.value = 0.9;
-    f.frequency.value = kind === 'space' ? 650 : 1400 + Math.random() * 900;
+    src.buffer = list[i]!;
+    src.playbackRate.value = kind === 'done' ? 1 : 0.96 + Math.random() * 0.08;
     const g = c.createGain();
-    g.gain.value = kind === 'space' ? 0.28 : 0.17;
-    src.connect(f);
-    f.connect(g);
-    g.connect(c.destination);
-    src.start(t);
-    const o = c.createOscillator();
-    const g2 = c.createGain();
-    o.type = 'sine';
-    o.frequency.value = kind === 'space' ? 120 : 210;
-    g2.gain.setValueAtTime(0.035, t);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    o.connect(g2);
-    g2.connect(c.destination);
-    o.start(t);
-    o.stop(t + 0.06);
+    g.gain.value = kind === 'key' || kind === 'space' ? 0.85 + Math.random() * 0.15 : 1;
+    src.connect(g);
+    g.connect(this.out!);
+    src.start();
   }
 }
