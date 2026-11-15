@@ -424,7 +424,8 @@ kbd {
   gap: 1.2rem 1.6rem;
 }
 .cols h3,
-.card h3 {
+.card h3,
+h3.deep-h {
   font-size: 0.72rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1057,5 +1058,64 @@ dialog.wide {
     flex: 1;
     justify-content: center;
     padding: 0.5rem 0.6rem;
+  }
+}
+
+/* Profil: Tasten, Finger, Fehlerarten (Phase 3) */
+.cols.deep {
+  grid-template-columns: 3fr 2fr;
+}
+.deep-h {
+  margin-top: 1.6rem;
+}
+.keymap {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+  aspect-ratio: 13.75 / 5;
+  margin: 0.4rem auto 0.4rem;
+}
+.keymap .key {
+  position: absolute;
+  height: 18%;
+  margin: 0;
+  padding: 0 0.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-family: var(--serif);
+  font-size: clamp(0.6rem, 1.8vw, 0.9rem);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--bad) var(--heat), var(--paper));
+  transform: scale(0.92);
+}
+.keymap .key.nodata {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.keymap .key.space {
+  border-radius: 7px;
+}
+.keymap-legend {
+  margin: 0 0 1.2rem;
+  text-align: center;
+}
+.finger-table td.weak {
+  color: var(--bad);
+  font-weight: 600;
+}
+.finger-table tr.hand td {
+  border-bottom: 0;
+  color: var(--muted);
+}
+.finger-table tr.hand-first td {
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 640px) {
+  .cols.deep {
+    grid-template-columns: 1fr;
   }
 }

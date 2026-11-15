@@ -59,3 +59,12 @@ export {
   type Stroke,
 } from './keyboard';
 export { classifyErrors, countErrorKinds, ERROR_KIND_NAMES, type ClassifiedError, type ErrorKind } from './errors';
+export { median, smoothRate, wilson } from './stats';
+export {
+  analyzeFingers,
+  fingerAdvice,
+  type FingerAnalysis,
+  type FingerOptions,
+  type GroupStat,
+  type KeyStat,
+} from './fingers';

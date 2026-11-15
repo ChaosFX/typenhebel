@@ -72,7 +72,7 @@ test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }
 
   await page.locator('#profBtn').click();
   await expect(page.locator('#profBody')).toContainText('3 Abschnitte · 500 Anschläge');
-  await expect(page.locator('#profBody tbody tr')).toHaveCount(3);
+  await expect(page.locator('#profHist tbody tr')).toHaveCount(3);
   await page.locator('#profClose').click();
 
   await openApp(page, true);

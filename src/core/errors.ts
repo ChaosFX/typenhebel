@@ -19,7 +19,7 @@ export const ERROR_KIND_NAMES: Record<ErrorKind, string> = {
   transposition: 'Vertauschung',
   omission: 'Auslassung',
   double: 'Doppelanschlag',
-  shift: 'Groß/klein (Umschalttaste)',
+  shift: 'Umschalttaste',
   umlaut: 'Umlaut/ß',
   consequential: 'Folgefehler',
   other: 'Sonstige',
