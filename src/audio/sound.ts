@@ -55,7 +55,31 @@ export class Sound {
     void this.load(DEFAULT_MACHINE);
   }
 
-  /** Audio-Kontext anlegen; nur beim Abspielen, also nach einem Tastendruck. */
+  /**
+   * Audio bei jeder echten Nutzergeste freischalten. Safari (macOS und iOS) startet einen Audio-Kontext
+   * nur innerhalb von keydown, pointerdown, touchend und Ähnlichem, nicht in beforeinput, wo die
+   * Anschläge ankommen. Nach Tab-Wechsel, Sperrbildschirm oder Anruf steht der Kontext wieder auf
+   * „suspended“ bzw. „interrupted“; deshalb bleiben die Listener dauerhaft und versuchen es bei jeder Geste.
+   */
+  unlockOn(target: EventTarget): void {
+    const unlock = (): void => this.unlock();
+    for (const type of ['keydown', 'pointerdown', 'touchend', 'mousedown'])
+      target.addEventListener(type, unlock, { capture: true, passive: true });
+  }
+
+  private unlock(): void {
+    if (!this.enabled() || !this.init()) return;
+    const c = this.ctx!;
+    if (c.state === 'running') return;
+    void c.resume().catch(() => {});
+    // iOS gibt die Ausgabe teils erst frei, wenn innerhalb der Geste wirklich etwas abgespielt wird.
+    const src = c.createBufferSource();
+    src.buffer = c.createBuffer(1, 1, c.sampleRate);
+    src.connect(c.destination);
+    src.start();
+  }
+
+  /** Audio-Kontext anlegen; nur innerhalb einer Nutzergeste oder beim Abspielen. */
   private init(): boolean {
     this.prepare();
     if (this.ctx) return true;
@@ -106,7 +130,8 @@ export class Sound {
   play(kind: SoundKind): void {
     if (!this.enabled() || !this.init()) return;
     const c = this.ctx!;
-    if (c.state === 'suspended') void c.resume();
+    // Auch „interrupted“ (Safari/iOS) und andere Zustände außer „closed“ fortsetzen.
+    if (c.state !== 'running' && c.state !== 'closed') void c.resume().catch(() => {});
     const vary = kind === 'key' || kind === 'space' ? 0.85 + Math.random() * 0.15 : 1;
 
     if (this.machine) {

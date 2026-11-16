@@ -24,6 +24,7 @@ export class Typing {
   private sess: Session | null = null;
 
   constructor(private readonly el: TypingElements) {
+    app.snd.unlockOn(document);
     attachInput(el.inp, {
       onChar: (ch, t) => this.onChar(ch, t),
       onBackspace: (t) => this.onBackspace(t),
