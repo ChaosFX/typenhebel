@@ -153,7 +153,9 @@ function checkBook(b: unknown): Book {
     !isStr(b.title) ||
     !Array.isArray(b.sections) ||
     !b.sections.length ||
-    !b.sections.every((s) => isObj(s) && isStr(s.text) && Array.isArray(s.breaks))
+    !b.sections.every(
+      (s) => isObj(s) && isStr(s.text) && Array.isArray(s.breaks) && (s.lines === undefined || Array.isArray(s.lines)),
+    )
   )
     throw new ImportError('Ein Buch in der Datei ist beschädigt.');
   return { ...(b as unknown as Book), author: isStr(b.author) ? b.author : '' };

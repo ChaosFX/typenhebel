@@ -1,6 +1,12 @@
 import fs from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { checkCorpusBook, CORPUS_VERSION, parseCorpusIndex, type CorpusEntry } from '../src/data/corpus';
+import {
+  checkCorpusBook,
+  CORPUS_VERSION,
+  outdatedCorpusBooks,
+  parseCorpusIndex,
+  type CorpusEntry,
+} from '../src/data/corpus';
 
 const entry = (over: Partial<CorpusEntry> = {}): CorpusEntry => ({
   id: 'c:test',
@@ -69,4 +75,40 @@ describe.skipIf(!fs.existsSync(INDEX))('ausgelieferter Korpus', () => {
       expect(titles).not.toContain('Anhang: Namensregister');
     }
   });
+});
+
+describe('outdatedCorpusBooks', () => {
+  const meta = (id: string, rev: string | undefined, sectionCount = 1) => ({
+    id,
+    title: 'T',
+    author: 'A',
+    rev,
+    sectionCount,
+  });
+  test('erneuert nur gespeicherte Bücher mit anderer Revision und gleicher Abschnittszahl', () => {
+    const index = [
+      entry({ id: 'c:alt', rev: 'neu' }),
+      entry({ id: 'c:aktuell', rev: 'neu' }),
+      entry({ id: 'c:anders', rev: 'neu', sections: 2 }),
+      entry({ id: 'c:fremd', rev: 'neu' }),
+      entry({ id: 'c:ohne', rev: undefined }),
+    ];
+    const owned = [meta('c:alt', undefined), meta('c:aktuell', 'neu'), meta('c:anders', 'x'), meta('c:ohne', 'x')];
+    expect(outdatedCorpusBooks(owned, index).map((e) => e.id)).toEqual(['c:alt']);
+  });
+});
+
+test.skipIf(!fs.existsSync(INDEX))('Korpus: jedes Buch trägt seine Revision, Faust hat Verszeilen', () => {
+  const idx = JSON.parse(fs.readFileSync(INDEX, 'utf8')) as { books: CorpusEntry[] };
+  for (const e of idx.books) {
+    const b = JSON.parse(fs.readFileSync('public/corpus/' + e.file, 'utf8')) as { rev?: string };
+    expect(e.rev).toMatch(/^[0-9a-f]{12}$/);
+    expect(b.rev).toBe(e.rev);
+  }
+  const faust = JSON.parse(fs.readFileSync('public/corpus/goethe-faust.json', 'utf8')) as {
+    sections: { text: string; lines?: number[] }[];
+  };
+  const first = faust.sections[0]!;
+  const chars = Array.from(first.text);
+  expect(chars.slice(0, first.lines![0]).join('')).toBe('Ihr naht euch wieder, schwankende Gestalten,');
 });

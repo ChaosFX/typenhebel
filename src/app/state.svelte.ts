@@ -38,6 +38,7 @@ import {
   type ProgressRecord,
   type SessionRecord,
 } from '../data/records';
+import { checkCorpusBook, CORPUS_PREFIX, outdatedCorpusBooks, parseCorpusIndex } from '../data/corpus';
 import { migrateLegacyKeys, store } from '../data/store';
 import { DEMO } from '../ui/demo';
 
@@ -432,6 +433,34 @@ class AppState {
     this.started = true;
     await this.openBook(current ?? DEMO.id);
     if (!document.hasFocus()) this.masked = true;
+    void this.refreshCorpus();
+  }
+
+  /**
+   * Gespeicherte mitgelieferte Bücher erneuern, wenn das Korpus neuer ist (gleiche Herkunft, still im Hintergrund).
+   * Fortschritt bleibt, weil nur Bücher mit unveränderter Abschnittszahl ersetzt werden.
+   */
+  async refreshCorpus(): Promise<void> {
+    const db = this.db;
+    if (!db || !this.books.some((b) => b.id.startsWith(CORPUS_PREFIX))) return;
+    try {
+      const base = import.meta.env.BASE_URL;
+      const r = await fetch(`${base}corpus/index.json`);
+      if (!r.ok) return;
+      for (const e of outdatedCorpusBooks(this.books, parseCorpusIndex(await r.json()))) {
+        const f = await fetch(`${base}corpus/${e.file}`);
+        if (!f.ok) continue;
+        const old = this.books.find((b) => b.id === e.id);
+        const b = { ...checkCorpusBook(await f.json(), e), created: old?.created };
+        if (b.sections.length !== old?.sectionCount) continue;
+        await dbSaveBook(db, b);
+        this.books = this.books.map((m) => (m.id === b.id ? bookMeta(b) : m));
+        // Offenes Buch sofort tauschen, solange im aktuellen Abschnitt noch nicht getippt wurde
+        if (this.book.id === b.id && this.sess?.start == null) await this.openBook(b.id, this.secIdx);
+      }
+    } catch (e) {
+      console.warn('Mitgelieferte Bücher konnten nicht aktualisiert werden.', e);
+    }
   }
 }
 

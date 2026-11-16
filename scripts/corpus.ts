@@ -2,6 +2,7 @@
 // Aufruf: npm run corpus [-- --list | --all]
 //   --list  Kapitel je EPUB anzeigen (✗ = entfällt)
 //   --all   auch zurückgehaltene Bücher (hold) bauen
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Window } from 'happy-dom';
@@ -67,6 +68,7 @@ export async function main(args: string[]): Promise<void> {
     });
     if (!book) throw new Error(`Kein Text in ${m.file}`);
     delete book.created;
+    book.rev = createHash('sha256').update(JSON.stringify(book.sections)).digest('hex').slice(0, 12);
     const json = JSON.stringify(book);
     fs.writeFileSync(path.join(out, m.id + '.json'), json);
     const words = book.sections.reduce((a, s) => a + wc(s.text), 0);
@@ -81,6 +83,7 @@ export async function main(args: string[]): Promise<void> {
       bytes: Buffer.byteLength(json),
       source: { ...book.source!, retrieved: manifest.retrieved },
       note: m.note,
+      rev: book.rev,
     });
     console.log(`${m.id}: ${index.at(-1)!.chapters} Kapitel, ${book.sections.length} Abschnitte, ${words} Wörter`);
   }

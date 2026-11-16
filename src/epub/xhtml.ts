@@ -1,5 +1,5 @@
 // Fließtext aus einem XHTML-Kapitel gewinnen (SPEC §7, Phase 1).
-// Überschriften werden zum Kapiteltitel (nicht getippt), Absätze bleiben erhalten,
+// Überschriften werden zum Kapiteltitel (nicht getippt), Absätze und Zeilenumbrüche (<br>, etwa in Versen) bleiben erhalten,
 // Fußnoten, Seitenzahlen, Navigation und Bilder fallen weg, Kursiv/Fett wird zu reinem Text.
 import type { RawChapter } from '../core/book';
 
@@ -78,6 +78,12 @@ const isMotto = (el: Element): boolean =>
   MOTTO_CLASSES.test(el.getAttribute('class') ?? '') || /\bepigraph\b/.test(epubType(el));
 
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
+/** Wie squash, aber Zeilenumbrüche aus <br> (als „\n“) bleiben stehen; mehrere hintereinander zählen als einer. */
+const squashLines = (s: string): string =>
+  s
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ *\n[\s]*/g, '\n')
+    .trim();
 
 /** Überschriftentext; Zeilenumbrüche (<br>) trennen Zeilen mit „ – “ (nach Doppelpunkt nur Leerzeichen). */
 function headingText(el: Element): string {
@@ -109,7 +115,7 @@ export function extractChapter(doc: Document, fallbackTitle: string): RawChapter
   let mottoDepth = 0;
 
   const flush = (): void => {
-    const p = squash(buf);
+    const p = squashLines(buf);
     buf = '';
     if (!p) return;
     paragraphs.push(p);
@@ -118,7 +124,8 @@ export function extractChapter(doc: Document, fallbackTitle: string): RawChapter
 
   const walk = (node: Node): void => {
     if (node.nodeType === 3 || node.nodeType === 4) {
-      buf += node.nodeValue ?? '';
+      // Zeilenumbrüche im Quelltext sind nur Leerraum; echte Umbrüche kommen aus <br>.
+      buf += (node.nodeValue ?? '').replace(/\s+/g, ' ');
       return;
     }
     if (node.nodeType !== 1) return;
@@ -126,7 +133,7 @@ export function extractChapter(doc: Document, fallbackTitle: string): RawChapter
     if (skipElement(el)) return;
     const tag = el.localName.toLowerCase();
     if (tag === 'br') {
-      buf += ' ';
+      buf += '\n';
       return;
     }
     if (HEADINGS.has(tag)) {

@@ -28,7 +28,7 @@
     const t = typing;
     if (!t || !sess) return;
     untrack(() => {
-      t.render(sess, app.book.sections[app.secIdx]?.breaks ?? []);
+      t.render(sess, app.book.sections[app.secIdx]);
       app.focusInput();
     });
   });
