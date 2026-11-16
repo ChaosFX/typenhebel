@@ -45,6 +45,8 @@ export interface Settings {
   strict: boolean;
   sound: boolean;
   theme: 'light' | 'dark';
+  /** Cursorform: senkrechter Strich oder Unterstrich unter dem nächsten Zeichen */
+  caret: 'bar' | 'underline';
 }
 
 /** Angaben für die Ergebniskarte, festgehalten beim Abschluss eines Abschnitts. */
@@ -79,6 +81,7 @@ function loadSettings(): Settings {
     strict: s.strict ?? true,
     sound: s.sound ?? true,
     theme: s.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    caret: s.caret === 'underline' ? 'underline' : 'bar',
   };
 }
 

@@ -1,3 +1,25 @@
+/* Literata (SIL Open Font License, src/fonts/OFL.txt), selbst gehostet; Variable Font mit optischer Größe.
+   Latin Extended lädt der Browser nur, wenn ein Text solche Zeichen enthält. */
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('./fonts/literata-latin-opsz-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
+    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Literata';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('./fonts/literata-latin-ext-opsz-normal.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 :root {
   --serif:
     'Literata', 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
@@ -214,12 +236,23 @@ button.primary:hover {
   left: 0;
   top: 0;
   width: 2px;
+  height: var(--ch, 1.2em);
   border-radius: 2px;
   background: var(--accent);
   box-shadow: 0 0 10px var(--glow);
   pointer-events: none;
   transition: transform 0.09s cubic-bezier(0.2, 0.8, 0.3, 1);
   animation: breathe 1.6s ease-in-out infinite;
+}
+/* Unterstrich: so breit wie das nächste Zeichen (mindestens ein halbes Geviert, etwa bei Leerzeichen und Zeilenende),
+   knapp unter der Unterlänge */
+[data-caret='underline'] .caret {
+  width: max(var(--cw, 0.5em), 0.5em);
+  height: 3px;
+  margin-top: calc(var(--ch, 1.2em) - 1px);
+  transition:
+    transform 0.09s cubic-bezier(0.2, 0.8, 0.3, 1),
+    width 0.09s ease-out;
 }
 .caret.err {
   animation: shake 0.25s;

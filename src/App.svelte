@@ -36,6 +36,9 @@
   $effect(() => {
     document.documentElement.dataset.theme = app.settings.theme;
   });
+  $effect(() => {
+    document.documentElement.dataset.caret = app.settings.caret;
+  });
 
   // Bis der gespeicherte Stand geladen ist, bleibt die Kopfzeile leer (sonst wirkt die App schon bedienbar).
   const ready = $derived(app.sess !== null);
@@ -60,6 +63,11 @@
   }
   function toggleSound(): void {
     app.settings.sound = !app.settings.sound;
+    app.saveSettings();
+    app.focusInput();
+  }
+  function toggleCaret(): void {
+    app.settings.caret = app.settings.caret === 'bar' ? 'underline' : 'bar';
     app.saveSettings();
     app.focusInput();
   }
@@ -153,6 +161,9 @@
         onclick={toggleMode}>{app.settings.strict ? 'Modus: Strikt' : 'Modus: Frei'}</button
       >
       <button id="soundBtn" onclick={toggleSound}>{app.settings.sound ? 'Ton: an' : 'Ton: aus'}</button>
+      <button id="caretBtn" title="Form des Cursors umschalten" onclick={toggleCaret}
+        >{app.settings.caret === 'bar' ? 'Cursor: Strich' : 'Cursor: Unterstrich'}</button
+      >
       <button id="themeBtn" onclick={toggleTheme}>{app.settings.theme === 'dark' ? 'Hell' : 'Dunkel'}</button>
     </div>
   </header>
