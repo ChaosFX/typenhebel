@@ -1,5 +1,6 @@
 // Mitgelieferte Bücher (public/corpus/): Index-Format und Prüfung. Wird vom Korpus-Skript erzeugt.
 import type { Book, BookSource } from '../core';
+import type { BookMeta } from './records';
 
 export const CORPUS_VERSION = 1;
 /** Buch-IDs mitgelieferter Bücher beginnen mit diesem Präfix. */
@@ -17,6 +18,8 @@ export interface CorpusEntry {
   bytes: number;
   source: BookSource & { retrieved: string };
   note?: string;
+  /** Prüfsumme der Abschnitte (wie `Book.rev`) */
+  rev?: string;
 }
 
 export interface CorpusIndex {
@@ -54,8 +57,22 @@ export function checkCorpusBook(x: unknown, entry: CorpusEntry): Book {
     b.id !== entry.id ||
     !Array.isArray(b.sections) ||
     !b.sections.length ||
-    !b.sections.every((s) => isStr(s?.text) && Array.isArray(s.breaks))
+    !b.sections.every(
+      (s) => isStr(s?.text) && Array.isArray(s.breaks) && (s.lines === undefined || Array.isArray(s.lines)),
+    )
   )
     throw new Error('Das Buch ist beschädigt.');
   return { ...b, created: Date.now() };
+}
+
+/**
+ * Gespeicherte Korpusbücher, die nach einem Korpus-Update veraltet sind (z. B. neue Zeilenumbrüche in Versen).
+ * Nur wenn die Abschnittszahl gleich geblieben ist; sonst passt der Fortschritt nicht mehr und die alte Kopie bleibt.
+ */
+export function outdatedCorpusBooks(owned: readonly BookMeta[], index: readonly CorpusEntry[]): CorpusEntry[] {
+  const byId = new Map(owned.map((b) => [b.id, b]));
+  return index.filter((e) => {
+    const b = byId.get(e.id);
+    return !!b && !!e.rev && b.rev !== e.rev && b.sectionCount === e.sections;
+  });
 }

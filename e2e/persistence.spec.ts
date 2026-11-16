@@ -254,3 +254,38 @@ test('Mitgelieferte Bücher: mit einem Klick laden, löschen, Fehler', async ({ 
   await expect(page.locator('#avail .shelf-item')).toHaveCount(n);
   await expect(page.locator('#libDlg')).toBeVisible();
 });
+
+test('Verse: Faust behält seine Zeilen, eine alte gespeicherte Kopie wird erneuert', async ({ page }) => {
+  // Zuerst eine Fassung von vor den Zeilenumbrüchen laden (ohne Revision und Zeilenmarken)
+  await page.route('**/corpus/goethe-faust.json', async (r) => {
+    const book = (await (await r.fetch()).json()) as { rev?: string; sections: { lines?: number[] }[] };
+    delete book.rev;
+    for (const s of book.sections) delete s.lines;
+    await r.fulfill({ json: book });
+  });
+  await openApp(page);
+  await page.locator('#libBtn').click();
+  await page.locator('#avail .shelf-item', { hasText: 'Faust' }).locator('.cover').click();
+  await expect(page.locator('#bookTitle')).toHaveText('Faust: Eine Tragödie');
+  await expect(page.locator('#text .c').first()).toBeVisible();
+  await expect(page.locator('#text br')).toHaveCount(0);
+
+  // Nach dem Neuladen erneuert die App die Kopie aus dem aktuellen Korpus
+  await page.unroute('**/corpus/goethe-faust.json');
+  await openApp(page, true);
+  await expect(page.locator('#text br').first()).toBeAttached();
+  await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 1 \//);
+
+  // Erste Verszeile tippen, das Leerzeichen am Zeilenende springt in die nächste Zeile
+  const first = 'Ihr naht euch wieder, schwankende Gestalten,';
+  const y = async () => (await page.locator('#text .caret').boundingBox())!.y;
+  await page.locator('#inp').focus();
+  const y0 = await y();
+  await page.keyboard.type(first);
+  expect(await y()).toBe(y0);
+  await page.keyboard.type(' ');
+  await expect.poll(y).toBeGreaterThan(y0 + 10);
+  const next = page.locator('#text .c').nth(Array.from(first).length + 1);
+  await expect(next).toHaveText('D'); // „Die früh sich einst dem trüben Blick gezeigt.“
+  expect((await next.boundingBox())!.x).toBeLessThan((await page.locator('#text .c').first().boundingBox())!.x + 1);
+});

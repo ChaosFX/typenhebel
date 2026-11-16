@@ -9,14 +9,15 @@
    "chapters": 14,
    "sections": 2550,
    "words": 363154,
-   "bytes": 2410875,
+   "bytes": 2411516,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
    },
-   "note": "Übersetzung: H. Röhl (Hermann Röhl † 1923 bzw. Hans Röhl † 1945)"
+   "note": "Übersetzung: H. Röhl (Hermann Röhl † 1923 bzw. Hans Röhl † 1945)",
+   "rev": "01189247b614"
   },
   {
    "id": "c:melville-moby-dick",
@@ -26,7 +27,7 @@
    "chapters": 66,
    "sections": 671,
    "words": 86522,
-   "bytes": 573750,
+   "bytes": 573893,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
@@ -34,7 +35,8 @@
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
    },
-   "note": "Übersetzung: Wilhelm Strüver (1927/28)"
+   "note": "Übersetzung: Wilhelm Strüver (1927/28)",
+   "rev": "6cbb50b16e32"
   },
   {
    "id": "c:goethe-faust",
@@ -44,14 +46,15 @@
    "chapters": 28,
    "sections": 277,
    "words": 30651,
-   "bytes": 203153,
+   "bytes": 220264,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
     "edition": "Reclam Verlag 1971",
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
-   }
+   },
+   "rev": "095da5a05968"
   },
   {
    "id": "c:horvath-jugend-ohne-gott",
@@ -61,14 +64,15 @@
    "chapters": 44,
    "sections": 303,
    "words": 32592,
-   "bytes": 214995,
+   "bytes": 215016,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
     "edition": "o.J.",
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
-   }
+   },
+   "rev": "1de393e03aa6"
   },
   {
    "id": "c:stevenson-schatzinsel",
@@ -78,7 +82,7 @@
    "chapters": 34,
    "sections": 589,
    "words": 71891,
-   "bytes": 464504,
+   "bytes": 464620,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
@@ -86,7 +90,8 @@
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
    },
-   "note": "Übersetzung: Heinrich Conrad († 1918)"
+   "note": "Übersetzung: Heinrich Conrad († 1918)",
+   "rev": "569fd1529b37"
   },
   {
    "id": "c:zweig-welt-von-gestern",
@@ -96,14 +101,15 @@
    "chapters": 18,
    "sections": 808,
    "words": 131701,
-   "bytes": 930660,
+   "bytes": 930742,
    "source": {
     "name": "Projekt Gutenberg-DE (projekt-gutenberg.org)",
     "url": "https://www.projekt-gutenberg.org/",
     "edition": "Deutscher Bücherbund 1981",
     "license": "Werk gemeinfrei; Textfassung von Projekt Gutenberg-DE",
     "retrieved": "2026-11-14"
-   }
+   },
+   "rev": "72d6f503e0a1"
   }
  ]
 }

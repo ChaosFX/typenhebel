@@ -31,12 +31,12 @@ describe('readEpub (synthetisch)', () => {
   });
 
   test('Titelseite: nur das Motto bleibt', () => {
-    expect(book.chapters[0]!.paragraphs).toEqual(['»Erst die Sicherheit, dann das Tempo.«', 'Unbekannt']);
+    expect(book.chapters[0]!.paragraphs).toEqual(['»Erst die Sicherheit,\ndann das Tempo.«', 'Unbekannt']);
     expect(all).not.toContain('Erstausgabe');
   });
 
-  test('Motto am Kapitelanfang bleibt, Verse mit Leerzeichen verbunden', () => {
-    expect(book.chapters[1]!.paragraphs.slice(0, 2)).toEqual(['Erste Zeile zweite Zeile', 'Goethe']);
+  test('Motto am Kapitelanfang bleibt, Verse behalten ihre Zeilen', () => {
+    expect(book.chapters[1]!.paragraphs.slice(0, 2)).toEqual(['Erste Zeile\nzweite Zeile', 'Goethe']);
   });
 
   test('Fußnoten, Verweisnummern, Seitenanker und Bilder entfernt; Kursiv wird Text', () => {
@@ -65,6 +65,17 @@ describe('extractChapter: Kapiteltitel', () => {
     expect(chapter('<h4>Neunzehntes Kapitel<br/>Jim erzählt:<br/>Die Garnison</h4>').title).toBe(
       'Neunzehntes Kapitel – Jim erzählt: Die Garnison',
     );
+  });
+
+  test('Verse: <br> bleibt als Zeilenumbruch, Quelltext-Umbrüche sind nur Leerraum', () => {
+    const c = chapter(
+      '<p class="vers">Ihr beiden, die ihr mir so oft,<br/>\n In Not und Trübsal beigestanden,<br/><br/>Sagt,\nwas ihr hofft.</p>' +
+        '<p>Prosa\n   über zwei Quelltextzeilen.</p>',
+    );
+    expect(c.paragraphs).toEqual([
+      'Ihr beiden, die ihr mir so oft,\nIn Not und Trübsal beigestanden,\nSagt, was ihr hofft.',
+      'Prosa über zwei Quelltextzeilen.',
+    ]);
   });
 
   test('sonst gilt die erste Überschrift; eine Nummern-Überschrift allein bleibt Titel', () => {

@@ -23,6 +23,8 @@ export interface Book {
   chapters?: Chapter[];
   sections: Section[];
   created?: number;
+  /** Mitgelieferte Bücher: Prüfsumme der Abschnitte, um gespeicherte Kopien nach einem Korpus-Update zu erneuern */
+  rev?: string;
 }
 
 /** Kapitel mit Absätzen, wie sie ein Import (z. B. EPUB) liefert. */

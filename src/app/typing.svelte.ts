@@ -1,6 +1,6 @@
 // Tippfläche: Zeichen, Cursor und Fortschrittsbalken werden direkt im DOM aktualisiert,
 // weil das bei jedem Anschlag passiert. Nur die Live-Werte laufen über Svelte.
-import type { Session } from '../core';
+import type { Section, Session } from '../core';
 import { attachInput } from '../input/engine';
 import { fmtTime } from '../ui/format';
 import { app } from './state.svelte';
@@ -60,10 +60,11 @@ export class Typing {
   }
 
   /** Neuen Abschnitt darstellen. */
-  render(sess: Session, breaks: readonly number[]): void {
+  render(sess: Session, sec: Pick<Section, 'breaks' | 'lines'> | undefined): void {
     this.sess = sess;
     const text = this.el.text;
-    const br = new Set(breaks);
+    const br = new Set(sec?.breaks);
+    const lines = new Set(sec?.lines);
     text.textContent = '';
     this.spans = [];
     const frag = document.createDocumentFragment();
@@ -77,7 +78,7 @@ export class Typing {
         const d = document.createElement('div');
         d.className = 'pbk';
         frag.appendChild(d);
-      }
+      } else if (lines.has(i)) frag.appendChild(document.createElement('br'));
     });
     text.appendChild(frag);
     this.caret = document.createElement('div');

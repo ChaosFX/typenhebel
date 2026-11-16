@@ -55,6 +55,36 @@ describe('core', () => {
     for (const s of secs) expect(Core.wc(s.text)).toBeLessThanOrEqual(200);
   });
 
+  test('cleanParagraph: Zeilenumbrüche bleiben, Leerraum drumherum fällt weg', () => {
+    expect(Core.cleanParagraph('  Erste  Zeile, \n\n  zweite\tZeile\n')).toBe('Erste Zeile,\nzweite Zeile');
+  });
+
+  test('segment: Verszeilen werden zu Leerzeichen mit Zeilenmarke, Absätze bleiben Brüche', () => {
+    const vers = 'Habe nun, ach! Philosophie,\nJuristerei und Medizin,\nUnd leider auch Theologie';
+    const [s] = Core.segment([vers, 'Durchaus studiert, mit heißem Bemühn.'], { min: 90, max: 200 });
+    const chars = Array.from(s!.text);
+    expect(s!.text).not.toContain('\n');
+    expect(s!.lines).toEqual([chars.indexOf('J') - 1, chars.indexOf('U') - 1]);
+    for (const i of s!.lines!) expect(chars[i]).toBe(' ');
+    expect(s!.breaks).toEqual([chars.indexOf('D') - 1]);
+    // Ohne Zeilenumbrüche kein Feld (ältere Daten sehen genauso aus)
+    expect(Core.segment(['Nur Prosa hier.'])[0]).not.toHaveProperty('lines');
+  });
+
+  test('segment: Satzgrenze auf einem Zeilenumbruch bleibt beim Teilen langer Absätze ein Zeilenumbruch', () => {
+    const line = 'Dies ist ein Vers mit genau zehn Wörtern darin hier.';
+    const p = Array.from({ length: 60 }, () => line).join('\n');
+    const secs = Core.segment([p], { min: 90, max: 200 });
+    expect(secs.length).toBeGreaterThanOrEqual(2);
+    for (const s of secs) {
+      const chars = Array.from(s.text);
+      // Jede Zeile außer der letzten im Abschnitt endet mit einer Zeilenmarke
+      expect(s.lines?.length).toBe(s.text.split('. ').length - 1);
+      for (const i of s.lines!) expect(chars[i - 1]).toBe('.');
+      expect(s.breaks).toEqual([]);
+    }
+  });
+
   test('Session strikt: Fehler blockiert, korrekt rückt vor', () => {
     const s = new Core.Session('Hallo', { strict: true });
     let time = 1000;

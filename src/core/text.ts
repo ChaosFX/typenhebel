@@ -2,6 +2,11 @@ export interface Section {
   text: string;
   /** Index des Leerzeichens nach einem Absatzende */
   breaks: number[];
+  /**
+   * Index des Leerzeichens am Ende einer Zeile innerhalb eines Absatzes (Verse, Mottos): Dort beginnt eine neue
+   * Zeile, aber ohne Absatzabstand. Getippt wird wie am Absatzende ein Leerzeichen. Fehlt bei älteren Daten.
+   */
+  lines?: number[];
   /** Hinweis über dem Abschnitt (Training: was geübt wird und warum) */
   note?: string;
 }
@@ -23,7 +28,7 @@ const INVISIBLE = /[\u200b-\u200d\u2060\ufeff\u00ad]/g;
 const PAGE_NUMBER = /^[-–—]?\s*\d{1,4}\s*[-–—]?$/;
 const PARAGRAPH_END = /[.!?…:,;"“”«»]$/;
 const COMMON_CHARS = /[^\p{L}\p{N}\s.,;:!?'"„“”‚‘’»«›‹()[\]\-–—/&%§€$@*+=_]/gu;
-const SENTENCE_SPLIT = /(?<=[.!?]["“”»«’']?)\s+(?=[„"»«(A-ZÄÖÜ0-9])/u;
+const SENTENCE_SPLIT = /(?<=[.!?]["“”»«’']?)(\s+)(?=[„"»«(A-ZÄÖÜ0-9])/u;
 
 /**
  * Zeichen-Normalisierung (SPEC §2): NFC, Sonder-Leerzeichen, unsichtbare Zeichen, ſ → s, … → ...
@@ -39,8 +44,15 @@ export function normalize(s: string): string {
     .replace(/\t/g, ' ');
 }
 
-/** Absatz aus strukturierter Quelle (z. B. EPUB): normalisieren, Leerraum zusammenfassen. */
-export const cleanParagraph = (s: string): string => normalize(s).replace(/\s+/g, ' ').trim();
+/**
+ * Absatz aus strukturierter Quelle (z. B. EPUB): normalisieren, Leerraum zusammenfassen.
+ * Einzelne Zeilenumbrüche (aus <br>, etwa in Versen) bleiben als „\n“ erhalten.
+ */
+export const cleanParagraph = (s: string): string =>
+  normalize(s)
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ *\n[\s]*/g, '\n')
+    .trim();
 
 /** Rohtext normalisieren und in Absätze und Überschriften zerlegen. */
 export function prepare(raw: string): Prepared {
@@ -68,7 +80,10 @@ export function prepare(raw: string): Prepared {
 
 interface Unit {
   t: string;
+  /** Absatzende */
   end: boolean;
+  /** Zeilenende innerhalb des Absatzes (Satzgrenze fiel auf einen Zeilenumbruch) */
+  nl?: boolean;
 }
 
 /** Absätze zu Abschnitten von etwa min–max Wörtern zusammenfassen. */
@@ -79,8 +94,11 @@ export function segment(paras: string[], { min = 90, max = 200 }: { min?: number
       units.push({ t: p, end: true });
       continue;
     }
-    const sents = p.split(SENTENCE_SPLIT);
-    sents.forEach((t, i) => units.push({ t, end: i === sents.length - 1 }));
+    // Mit Gruppe im Muster liefert split abwechselnd Satz und Trennraum; der Trennraum zeigt, ob die Grenze
+    // auf einen Zeilenumbruch fiel.
+    const parts = p.split(SENTENCE_SPLIT);
+    for (let i = 0; i < parts.length; i += 2)
+      units.push({ t: parts[i]!, end: i === parts.length - 1, nl: parts[i + 1]?.includes('\n') });
   }
   const out: Section[] = [];
   let cur: Unit[] = [];
@@ -89,14 +107,22 @@ export function segment(paras: string[], { min = 90, max = 200 }: { min?: number
     if (!cur.length) return;
     const chars: string[] = [];
     const breaks: number[] = [];
+    const lines: number[] = [];
     cur.forEach((u, k) => {
       if (k > 0) {
-        if (cur[k - 1]!.end) breaks.push(chars.length);
+        const prev = cur[k - 1]!;
+        if (prev.end) breaks.push(chars.length);
+        else if (prev.nl) lines.push(chars.length);
         chars.push(' ');
       }
-      chars.push(...Array.from(u.t));
+      for (const ch of u.t) {
+        if (ch === '\n') {
+          lines.push(chars.length);
+          chars.push(' ');
+        } else chars.push(ch);
+      }
     });
-    out.push({ text: chars.join(''), breaks });
+    out.push(lines.length ? { text: chars.join(''), breaks, lines } : { text: chars.join(''), breaks });
     cur = [];
     words = 0;
   };
@@ -115,6 +141,7 @@ export function segment(paras: string[], { min = 90, max = 200 }: { min?: number
       const off = Array.from(prev.text).length + 1;
       prev.text += ' ' + last.text;
       prev.breaks.push(...last.breaks.map((b) => b + off));
+      if (last.lines?.length) (prev.lines ??= []).push(...last.lines.map((b) => b + off));
       out.pop();
     }
   }
