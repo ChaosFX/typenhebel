@@ -25,6 +25,8 @@ export class Typing {
 
   constructor(private readonly el: TypingElements) {
     app.snd.unlockOn(document);
+    // Die Schrift lädt erst nach dem ersten Zeichnen (font-display: swap); danach stimmen die Positionen nicht mehr.
+    document.fonts?.addEventListener('loadingdone', () => this.updateCaret(true));
     attachInput(el.inp, {
       onChar: (ch, t) => this.onChar(ch, t),
       onBackspace: (t) => this.onBackspace(t),
@@ -109,7 +111,9 @@ export class Typing {
     const y = s.offsetTop;
     const c = this.caret;
     const lineChanged = y !== this.lastY;
-    c.style.height = s.offsetHeight + 'px';
+    // Breite und Höhe des Zeichens unter dem Cursor; ob Strich oder Unterstrich, entscheidet das CSS (data-caret).
+    c.style.setProperty('--ch', s.offsetHeight + 'px');
+    c.style.setProperty('--cw', (atEnd ? 0 : s.offsetWidth) + 'px');
     if (lineChanged || instant) c.style.transition = 'none';
     c.style.transform = `translate(${x}px,${y}px)`;
     if (lineChanged || instant)
