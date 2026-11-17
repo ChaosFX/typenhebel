@@ -15,6 +15,7 @@ import {
   type MergeResult,
   type ProgressRecord,
   type SessionRecord,
+  withDigest,
 } from './records';
 import { PREFIX } from './store';
 
@@ -44,6 +45,18 @@ export class TypenhebelDb extends Dexie {
       progress: 'bookId',
       kv: 'key',
     });
+    // Version 2 (Phase 6): Kurzfassung je Session für alle, die noch Rohdaten haben.
+    this.version(2)
+      .stores({})
+      .upgrade((tx) =>
+        tx
+          .table<SessionRecord, string>('sessions')
+          .toCollection()
+          .modify((s: SessionRecord) => {
+            const d = withDigest(s).digest;
+            if (d) s.digest = d;
+          }),
+      );
   }
 }
 
@@ -101,6 +114,7 @@ export async function migrateFromLocalStorage(db: TypenhebelDb, storage: Storage
 
 export interface LoadedState {
   books: BookMeta[];
+  /** ohne Kurzfassung: die wird nur für Auswertungen über Zeiträume gebraucht und dann eigens geladen */
   sessions: SessionRecord[];
   progress: Map<string, ProgressRecord>;
   profile: Profile;
@@ -121,7 +135,7 @@ export async function loadState(db: TypenhebelDb): Promise<LoadedState> {
   ]);
   return {
     books,
-    sessions,
+    sessions: sessions.map(({ digest: _, ...s }) => s),
     progress: new Map(progress.map((p) => [p.bookId, p])),
     profile: (profile?.value as Profile | undefined) ?? emptyProfile(),
     current: (current?.value as string | undefined) ?? null,

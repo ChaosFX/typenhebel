@@ -77,6 +77,71 @@ const push = (m: Map<string, number[]>, k: string, v: number): void => {
 /** Ein Intervall ist verwertbar: richtiger Anschlag direkt nach einem Ereignis, ohne Pause dazwischen. */
 const timed = (e: KeyEvent): e is KeyEvent & { dt: number } => e.ok && e.dt !== null && e.dt < IDLE_CAP;
 
+/** Was beim Durchgehen eines Protokolls anfällt (gemeinsam für die Auswertung und die Kurzfassung je Abschnitt). */
+export interface RhythmSink {
+  /** Dreiergruppe mit Zeit für das 2. und 3. Zeichen; `pos` = am Wortanfang bzw. -ende */
+  group(k: string, ms: number, pos: 'start' | 'end' | null): void;
+  error(): void;
+  /** Intervall eines richtigen Anschlags: kurz nach einem Fehler (≤ 3) oder mit Abstand (> 5) */
+  interval(ms: number, afterError: boolean): void;
+  /** Anschlag im ersten bzw. letzten Drittel eines Abschnitts mit mindestens 60 Anschlägen */
+  third(part: 'first' | 'last', ok: boolean, ms: number | null): void;
+  /** Der Abschnitt zählt für die Ermüdung (mindestens 60 Anschläge) */
+  fatigueSection(): void;
+}
+
+/** Ein Protokoll auswerten. Definitionen siehe SPEC Phase 3 (Rhythmus). */
+export function scanLog(log: readonly LogEvent[], sink: RhythmSink): void {
+  const text = new Map<number, string>();
+  for (const e of log) if (e.kind === 'k') text.set(e.i, e.exp);
+  const keys = log.filter((e): e is KeyEvent => e.kind === 'k');
+
+  // Dreiergruppen: drei richtige Anschläge an aufeinanderfolgenden Stellen, ohne Fehler oder Pause dazwischen
+  for (let j = 2; j < log.length; j++) {
+    const [a, b, c] = [log[j - 2]!, log[j - 1]!, log[j]!];
+    if (a.kind !== 'k' || b.kind !== 'k' || c.kind !== 'k' || !a.ok || !timed(b) || !timed(c)) continue;
+    if (b.i !== a.i + 1 || c.i !== b.i + 1) continue;
+    const k = (a.exp + b.exp + c.exp).toLowerCase();
+    if (k.includes(' ') && k.trim().length < 2) continue; // zwei Leerzeichen: kein Muster
+    const ms = cap(b.dt) + cap(c.dt);
+    // Wortanfang/-ende: Gruppe liegt am Anfang bzw. Ende eines Worts mit mindestens 4 Buchstaben
+    let pos: 'start' | 'end' | null = null;
+    if ([...k].every(isLetter)) {
+      const before = text.get(a.i - 1);
+      const after1 = text.get(c.i + 1);
+      const startsWord = before === undefined || !isLetter(before);
+      const endsWord = after1 === undefined || !isLetter(after1);
+      if (startsWord && !endsWord) pos = 'start';
+      if (endsWord && !startsWord) pos = 'end';
+    }
+    sink.group(k, ms, pos);
+  }
+
+  // Verlangsamung nach Fehlern: die nächsten 3 richtigen Anschläge nach einem Fehler gegen alle übrigen
+  let sinceError = Infinity;
+  for (const e of keys) {
+    if (!e.ok) {
+      sink.error();
+      sinceError = 0;
+      continue;
+    }
+    sinceError++;
+    if (!timed(e)) continue;
+    if (sinceError <= 3) sink.interval(cap(e.dt), true);
+    else if (sinceError > 5) sink.interval(cap(e.dt), false);
+  }
+
+  // Ermüdung: erstes und letztes Drittel des Abschnitts (nach Textposition)
+  if (keys.length >= 60) {
+    const maxI = Math.max(...keys.map((e) => e.i));
+    sink.fatigueSection();
+    for (const e of keys) {
+      const part = e.i < maxI / 3 ? 'first' : e.i >= (2 * maxI) / 3 ? 'last' : null;
+      if (part) sink.third(part, e.ok, timed(e) ? cap(e.dt) : null);
+    }
+  }
+}
+
 export function analyzeRhythm(sessions: readonly RhythmSession[], opts: RhythmOptions = {}): Rhythm | null {
   const { minN = 4, slowRatio = 1.25, minErrors = 10, minSessions = 5 } = opts;
   const logs = sessions.map((s) => s.events).filter((e): e is LogEvent[] => !!e?.length);
@@ -91,57 +156,22 @@ export function analyzeRhythm(sessions: readonly RhythmSession[], opts: RhythmOp
   const thirds = { firstMs: [] as number[], lastMs: [] as number[], first: [0, 0], last: [0, 0] };
   let fatigueSessions = 0;
 
-  for (const log of logs) {
-    const text = new Map<number, string>();
-    for (const e of log) if (e.kind === 'k') text.set(e.i, e.exp);
-    const keys = log.filter((e): e is KeyEvent => e.kind === 'k');
-
-    // Dreiergruppen: drei richtige Anschläge an aufeinanderfolgenden Stellen, ohne Fehler oder Pause dazwischen
-    for (let j = 2; j < log.length; j++) {
-      const [a, b, c] = [log[j - 2]!, log[j - 1]!, log[j]!];
-      if (a.kind !== 'k' || b.kind !== 'k' || c.kind !== 'k' || !a.ok || !timed(b) || !timed(c)) continue;
-      if (b.i !== a.i + 1 || c.i !== b.i + 1) continue;
-      const k = (a.exp + b.exp + c.exp).toLowerCase();
-      if (k.includes(' ') && k.trim().length < 2) continue; // zwei Leerzeichen: kein Muster
-      const ms = cap(b.dt) + cap(c.dt);
+  const sink: RhythmSink = {
+    group(k, ms, pos) {
       push(tri, k, ms);
-      // Wortanfang/-ende: Gruppe liegt am Anfang bzw. Ende eines Worts mit mindestens 4 Buchstaben
-      if (![...k].every(isLetter)) continue;
-      const before = text.get(a.i - 1);
-      const after1 = text.get(c.i + 1);
-      const startsWord = before === undefined || !isLetter(before);
-      const endsWord = after1 === undefined || !isLetter(after1);
-      if (startsWord && !endsWord) push(starts, k, ms);
-      if (endsWord && !startsWord) push(ends, k, ms);
-    }
-
-    // Verlangsamung nach Fehlern: die nächsten 3 richtigen Anschläge nach einem Fehler gegen alle übrigen
-    let sinceError = Infinity;
-    for (const e of keys) {
-      if (!e.ok) {
-        errors++;
-        sinceError = 0;
-        continue;
-      }
-      sinceError++;
-      if (!timed(e)) continue;
-      if (sinceError <= 3) after.push(cap(e.dt));
-      else if (sinceError > 5) base.push(cap(e.dt));
-    }
-
-    // Ermüdung: erstes und letztes Drittel des Abschnitts (nach Textposition)
-    const maxI = Math.max(...keys.map((e) => e.i));
-    if (keys.length >= 60) {
-      fatigueSessions++;
-      for (const e of keys) {
-        const part = e.i < maxI / 3 ? 'first' : e.i >= (2 * maxI) / 3 ? 'last' : null;
-        if (!part) continue;
-        thirds[part][0]!++;
-        if (!e.ok) thirds[part][1]!++;
-        if (timed(e)) thirds[part === 'first' ? 'firstMs' : 'lastMs'].push(cap(e.dt));
-      }
-    }
-  }
+      if (pos === 'start') push(starts, k, ms);
+      if (pos === 'end') push(ends, k, ms);
+    },
+    error: () => void errors++,
+    interval: (ms, afterError) => void (afterError ? after : base).push(ms),
+    third(part, ok, ms) {
+      thirds[part][0]!++;
+      if (!ok) thirds[part][1]!++;
+      if (ms !== null) thirds[part === 'first' ? 'firstMs' : 'lastMs'].push(ms);
+    },
+    fatigueSection: () => void fatigueSessions++,
+  };
+  for (const log of logs) scanLog(log, sink);
 
   const all = [...tri.values()].flat();
   const triBase = median(all) ?? 0;

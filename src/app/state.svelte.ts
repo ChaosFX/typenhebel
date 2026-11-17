@@ -9,6 +9,7 @@ import {
   chapterOf,
   chapterRange,
   emptyProfile,
+  digestOf,
   mergeProfile,
   series,
   Session,
@@ -284,12 +285,13 @@ class AppState {
       stats: st,
       events: s.log,
     };
+    // Die Kurzfassung geht nur in die Datenbank; im Speicher bleiben die Sessions schlank (wie bei loadState).
     this.sessions = [...this.sessions, rec];
     // Kopie: mergeProfile ändert das Objekt direkt, Svelte erkennt nur einen neuen Wert.
     const profile = mergeProfile(structuredClone(this.profile), s.log);
     profile.sessions++;
     this.profile = profile;
-    this.persist((d) => addSession(d, rec, profile));
+    this.persist((d) => addSession(d, { ...rec, digest: digestOf(s.log) }, profile));
     const ds = this.doneSet(book.id);
     ds.add(this.secIdx);
     if (book.id !== TRAINING_ID)
