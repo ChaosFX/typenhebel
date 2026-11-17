@@ -49,6 +49,8 @@ export interface Settings {
   theme: 'light' | 'dark';
   /** Cursorform: senkrechter Strich oder Unterstrich unter dem nächsten Zeichen */
   caret: 'bar' | 'underline';
+  /** Schreibmaschinen-Tastatur unter dem Text: nur im Training, immer oder nie */
+  keyboard: 'training' | 'always' | 'off';
 }
 
 /** Angaben für die Ergebniskarte, festgehalten beim Abschluss eines Abschnitts. */
@@ -84,6 +86,7 @@ function loadSettings(): Settings {
     sound: s.sound ?? true,
     theme: s.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
     caret: s.caret === 'underline' ? 'underline' : 'bar',
+    keyboard: s.keyboard === 'always' || s.keyboard === 'off' ? s.keyboard : 'training',
   };
 }
 

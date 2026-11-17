@@ -37,6 +37,23 @@ export const FINGER_NAMES: Record<Finger, string> = {
 };
 export const HAND_NAMES: Record<Hand, string> = { left: 'links', right: 'rechts' };
 
+/** „linker Zeigefinger“, „rechter kleiner Finger“, „Daumen“ */
+export const fingerLabel = (k: Pick<Key, 'hand' | 'finger'>): string =>
+  k.hand ? `${k.hand === 'left' ? 'linker' : 'rechter'} ${FINGER_NAMES[k.finger]}` : FINGER_NAMES[k.finger];
+
+/** Beschreibung der Anschläge für ein Zeichen, z. B. „rechter kleiner Finger + Umschalttaste links“. */
+export function describeStrokes(strokes: readonly Stroke[]): string {
+  return strokes
+    .map(
+      (s) =>
+        fingerLabel(s.key) +
+        (s.shift ? ` + Umschalttaste ${HAND_NAMES[s.shift]}` : '') +
+        (s.altGr ? ' + AltGr' : '') +
+        (s.dead ? ' (Tottaste)' : ''),
+    )
+    .join(', dann ');
+}
+
 /** Finger je Taste einer Reihe, von links nach rechts (L/R + 5 = kleiner Finger … 2 = Zeigefinger). */
 type F = 'L5' | 'L4' | 'L3' | 'L2' | 'R2' | 'R3' | 'R4' | 'R5';
 interface RowDef {

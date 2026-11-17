@@ -1,23 +1,25 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { chapterOf, chapterRange } from './core';
-  import { app, hasChapters } from './app/state.svelte';
+  import { app, hasChapters, TRAINING_ID } from './app/state.svelte';
   import { Typing } from './app/typing.svelte';
   import CoverDialog from './components/CoverDialog.svelte';
   import LibraryDialog from './components/LibraryDialog.svelte';
   import LoadDialog from './components/LoadDialog.svelte';
   import ProfileDialog from './components/ProfileDialog.svelte';
   import ResultCard from './components/ResultCard.svelte';
+  import Typewriter from './components/Typewriter.svelte';
 
   let textEl: HTMLElement;
   let inp: HTMLTextAreaElement;
   let bar: HTMLElement;
   let streak: HTMLElement;
+  let kb = $state<HTMLElement>();
   let typing = $state<Typing | null>(null);
 
   onMount(() => {
     app.inp = inp;
-    typing = new Typing({ text: textEl, inp, bar, streak });
+    typing = new Typing({ text: textEl, inp, bar, streak, kb });
     const timer = setInterval(() => typing?.tick(), 400);
     return () => clearInterval(timer);
   });
@@ -31,6 +33,13 @@
       t.render(sess, app.book.sections[app.secIdx]);
       app.focusInput();
     });
+  });
+
+  const kbVisible = $derived(
+    app.settings.keyboard === 'always' || (app.settings.keyboard === 'training' && app.book.id === TRAINING_ID),
+  );
+  $effect(() => {
+    typing?.setKeyboard(kbVisible);
   });
 
   $effect(() => {
@@ -68,6 +77,13 @@
   }
   function toggleCaret(): void {
     app.settings.caret = app.settings.caret === 'bar' ? 'underline' : 'bar';
+    app.saveSettings();
+    app.focusInput();
+  }
+  const KEYBOARD_NEXT = { training: 'always', always: 'off', off: 'training' } as const;
+  const KEYBOARD_LABEL = { training: 'Tastatur: Training', always: 'Tastatur: immer', off: 'Tastatur: aus' };
+  function toggleKeyboard(): void {
+    app.settings.keyboard = KEYBOARD_NEXT[app.settings.keyboard];
     app.saveSettings();
     app.focusInput();
   }
@@ -164,6 +180,9 @@
       <button id="caretBtn" title="Form des Cursors umschalten" onclick={toggleCaret}
         >{app.settings.caret === 'bar' ? 'Cursor: Strich' : 'Cursor: Unterstrich'}</button
       >
+      <button id="kbBtn" title="Tastatur unter dem Text: nur im Training, immer oder aus" onclick={toggleKeyboard}
+        >{KEYBOARD_LABEL[app.settings.keyboard]}</button
+      >
       <button id="themeBtn" onclick={toggleTheme}>{app.settings.theme === 'dark' ? 'Hell' : 'Dunkel'}</button>
     </div>
   </header>
@@ -185,6 +204,7 @@
     </div>
   </main>
   <div class="hint" id="hint" role="status">{app.hint}</div>
+  <Typewriter hidden={!kbVisible} bind:el={kb} />
   <div class="foot">
     <span><kbd>Esc</kbd> Abschnitt neu starten</span>
     <span><kbd>⌫</kbd> korrigieren (nur im Modus „Frei“)</span>
