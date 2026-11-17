@@ -45,7 +45,9 @@ export {
 export {
   adjacent,
   areNeighbors,
+  describeStrokes,
   FINGER_NAMES,
+  fingerLabel,
   HAND_NAMES,
   KEYS,
   keyOf,

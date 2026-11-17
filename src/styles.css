@@ -38,6 +38,15 @@
   --shadow:
     0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 40px 80px -40px rgba(70, 45, 20, 0.35), 0 2px 6px rgba(70, 45, 20, 0.08);
   --fs: clamp(1.18rem, 1rem + 0.85vw, 1.6rem);
+  /* Schreibmaschine: Emaille-Gehäuse, cremefarbene Tastenkappen, Chromringe */
+  --tw-body: #2e2925;
+  --tw-body-hi: #463f38;
+  --tw-cap: #f4ecda;
+  --tw-cap-lo: #d9ccb2;
+  --tw-legend: #2a2420;
+  --tw-chrome-hi: #f2f2ef;
+  --tw-chrome-lo: #8d8a84;
+  --tw-next: #e0a24f;
 }
 [data-theme='dark'] {
   --bg: #141210;
@@ -52,6 +61,14 @@
   --line: rgba(236, 225, 205, 0.1);
   --card: #25211c;
   --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 40px 80px -40px rgba(0, 0, 0, 0.8), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --tw-body: #0f0e0c;
+  --tw-body-hi: #24211d;
+  --tw-cap: #d8ccb4;
+  --tw-cap-lo: #ad9f86;
+  --tw-legend: #1d1a16;
+  --tw-chrome-hi: #c9c7c2;
+  --tw-chrome-lo: #5d5b57;
+  --tw-next: #e2a65a;
 }
 * {
   box-sizing: border-box;
@@ -352,6 +369,136 @@ kbd {
   border-radius: 5px;
   padding: 0.05rem 0.4rem;
   background: var(--card);
+}
+
+/* ---------- Schreibmaschinen-Tastatur ---------- */
+.typewriter {
+  position: sticky;
+  bottom: 0.6rem;
+  z-index: 5;
+  container-type: inline-size;
+  max-width: 36rem;
+  margin: 1rem auto 0;
+  padding: 0.9rem 1.1rem 0.6rem;
+  border-radius: 22px 22px 14px 14px;
+  background: linear-gradient(180deg, var(--tw-body-hi), var(--tw-body) 38%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 18px 40px -18px rgba(30, 20, 10, 0.55),
+    0 2px 6px rgba(30, 20, 10, 0.25);
+}
+.typewriter[hidden] {
+  display: none;
+}
+.tw-deck {
+  position: relative;
+  aspect-ratio: 15 / 5;
+  transform: perspective(70em) rotateX(16deg);
+  transform-origin: 50% 100%;
+}
+.tw-key {
+  position: absolute;
+  height: 20%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tw-cap {
+  position: relative;
+  width: 76%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border-radius: 50%;
+  font-family: var(--serif);
+  font-size: 2.55cqw;
+  font-weight: 600;
+  color: var(--tw-legend);
+  background: radial-gradient(circle at 50% 38%, var(--tw-cap) 55%, var(--tw-cap-lo));
+  /* Chromring und Schatten des Tastenhebels */
+  box-shadow:
+    0 0 0 0.32cqw var(--tw-chrome-lo),
+    0 0 0 0.55cqw var(--tw-chrome-hi),
+    0 0 0 0.7cqw rgba(0, 0, 0, 0.35),
+    0 0.9cqw 0.7cqw rgba(0, 0, 0, 0.45);
+  transition:
+    box-shadow 0.12s,
+    background 0.12s;
+}
+.tw-cap small {
+  font-size: 0.68em;
+  font-weight: 500;
+  opacity: 0.7;
+  margin-bottom: 0.12em;
+}
+.tw-key.wide .tw-cap {
+  width: 92%;
+  height: 66%;
+  aspect-ratio: auto;
+  border-radius: 999px;
+  font-family: var(--sans);
+  font-size: 2.2cqw;
+}
+.tw-key.idle {
+  opacity: 0.45;
+}
+.tw-key.home .tw-cap::after {
+  content: '';
+  position: absolute;
+  bottom: 14%;
+  width: 22%;
+  height: 0.35cqw;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.45;
+}
+.tw-key.tw-space.next .tw-cap {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tw-next) 50%, var(--tw-cap)),
+    color-mix(in srgb, var(--tw-next) 65%, var(--tw-chrome-lo))
+  );
+}
+.tw-space .tw-cap {
+  width: 100%;
+  height: 46%;
+  aspect-ratio: auto;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--tw-chrome-hi), var(--tw-chrome-lo));
+  box-shadow:
+    0 0 0 0.3cqw rgba(0, 0, 0, 0.35),
+    0 0.9cqw 0.7cqw rgba(0, 0, 0, 0.45);
+}
+/* Nächste Taste: leuchtender Ring; zweiter Anschlag einer Tottaste schwächer */
+.tw-key.next .tw-cap {
+  background: radial-gradient(
+    circle at 50% 38%,
+    color-mix(in srgb, var(--tw-next) 45%, var(--tw-cap)) 55%,
+    color-mix(in srgb, var(--tw-next) 70%, var(--tw-cap-lo))
+  );
+  box-shadow:
+    0 0 0 0.32cqw var(--tw-chrome-lo),
+    0 0 0 0.75cqw var(--tw-next),
+    0 0 2.6cqw 0.6cqw var(--tw-next),
+    0 0.9cqw 0.7cqw rgba(0, 0, 0, 0.45);
+}
+.tw-key.next.then .tw-cap {
+  background: radial-gradient(circle at 50% 38%, var(--tw-cap) 55%, var(--tw-cap-lo));
+  box-shadow:
+    0 0 0 0.32cqw var(--tw-chrome-lo),
+    0 0 0 0.55cqw var(--tw-next),
+    0 0.9cqw 0.7cqw rgba(0, 0, 0, 0.45);
+}
+.tw-finger {
+  min-height: 1.3em;
+  margin-top: 0.35rem;
+  text-align: center;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--tw-cap) 70%, transparent);
 }
 
 .veil {

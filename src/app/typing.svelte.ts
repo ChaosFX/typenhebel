@@ -1,6 +1,6 @@
 // Tippfläche: Zeichen, Cursor und Fortschrittsbalken werden direkt im DOM aktualisiert,
 // weil das bei jedem Anschlag passiert. Nur die Live-Werte laufen über Svelte.
-import type { Section, Session } from '../core';
+import { describeStrokes, strokesFor, type Section, type Session, type Stroke } from '../core';
 import { attachInput } from '../input/engine';
 import { fmtTime } from '../ui/format';
 import { app } from './state.svelte';
@@ -10,7 +10,17 @@ export interface TypingElements {
   inp: HTMLTextAreaElement;
   bar: HTMLElement;
   streak: HTMLElement;
+  /** Schreibmaschinen-Tastatur (Tasten mit data-k, Fingerhinweis mit data-finger) */
+  kb?: HTMLElement;
 }
+
+/** Tasten (data-k) eines Anschlags: Taste, Umschalttaste der anderen Hand, AltGr */
+const strokeKeys = (s: Stroke): string[] => [
+  s.key.base,
+  ...(s.shift ? [s.shift === 'left' ? 'shiftL' : 'shiftR'] : []),
+  ...(s.altGr ? ['altgr'] : []),
+];
+const keysFor = (ch: string): string[] => strokesFor(ch)?.flatMap(strokeKeys) ?? [];
 
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -22,8 +32,15 @@ export class Typing {
   private caret: HTMLDivElement = document.createElement('div');
   private lastY = -1;
   private sess: Session | null = null;
+  /** Tastatur: Tasten nach data-k, gerade hervorgehobene Tasten, Fingerhinweis */
+  private keyEls = new Map<string, HTMLElement>();
+  private lit: HTMLElement[] = [];
+  private fingerEl: HTMLElement | null = null;
+  private kbOn = false;
 
   constructor(private readonly el: TypingElements) {
+    for (const k of el.kb?.querySelectorAll<HTMLElement>('[data-k]') ?? []) this.keyEls.set(k.dataset.k!, k);
+    this.fingerEl = el.kb?.querySelector<HTMLElement>('[data-finger]') ?? null;
     app.snd.unlockOn(document);
     // Die Schrift lädt erst nach dem ersten Zeichnen (font-display: swap); danach stimmen die Positionen nicht mehr.
     document.fonts?.addEventListener('loadingdone', () => this.updateCaret(true));
@@ -87,6 +104,47 @@ export class Typing {
     this.lastY = -1;
     this.updateCaret(true);
     this.updateLive();
+    this.showNext();
+  }
+
+  /** Tastatur ein- oder ausblenden; ausgeblendet kostet sie beim Tippen nichts. */
+  setKeyboard(on: boolean): void {
+    this.kbOn = on;
+    this.showNext();
+  }
+
+  /** Nächste Taste(n) hervorheben: bei Tottasten beide Anschläge, der zweite schwächer. */
+  private showNext(): void {
+    for (const e of this.lit) e.classList.remove('next', 'then');
+    this.lit = [];
+    const sess = this.sess;
+    if (!this.kbOn || !sess) return;
+    const ch = sess.done ? undefined : sess.chars[sess.cursor];
+    const strokes = ch === undefined ? null : strokesFor(ch);
+    strokes?.forEach((st, j) => {
+      for (const k of strokeKeys(st)) {
+        const e = this.keyEls.get(k);
+        if (!e || this.lit.includes(e)) continue;
+        e.classList.add('next');
+        if (j > 0) e.classList.add('then');
+        this.lit.push(e);
+      }
+    });
+    if (this.fingerEl)
+      this.fingerEl.textContent = strokes ? `${ch === ' ' ? 'Leertaste' : ch} · ${describeStrokes(strokes)}` : '';
+  }
+
+  /** Anschlag auf der Tastatur zeigen: Tasten gehen kurz nach unten, bei Fehlern rot. */
+  private strike(keys: string[], ok: boolean): void {
+    if (!this.kbOn) return;
+    const bad = ok ? '' : getComputedStyle(this.el.kb!).getPropertyValue('--bad');
+    for (const k of keys) {
+      const cap = this.keyEls.get(k)?.firstElementChild as HTMLElement | null | undefined;
+      if (!cap?.animate) continue;
+      const down: Keyframe = reduced ? {} : { transform: 'translateY(0.7cqw) scale(0.94)' };
+      if (!ok) down.background = bad;
+      cap.animate([{}, { ...down, offset: 0.25 }, {}], { duration: ok ? 150 : 320, easing: 'ease-out' });
+    }
   }
 
   /** Regelmäßig aufrufen, damit Zeit und Tempo auch ohne Anschlag weiterlaufen. */
@@ -169,6 +227,8 @@ export class Typing {
     }
     app.hint = '';
     this.paint(r.i);
+    this.strike(keysFor(ch), r.ok);
+    this.showNext();
     if (r.ok) {
       this.spans[r.i]!.classList.add('pop');
       app.snd.play(ch === ' ' ? 'space' : 'key');
@@ -188,6 +248,8 @@ export class Typing {
     if (!r) return;
     app.hint = '';
     this.paint(r.i);
+    this.strike(['bs'], true);
+    this.showNext();
     this.updateCaret();
     this.updateLive();
   }

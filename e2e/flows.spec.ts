@@ -104,6 +104,39 @@ test('Training: Übungen mit Begründung, nach dem Neuladen wieder das Buch', as
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 1 \//);
 });
 
+test('Schreibmaschinen-Tastatur: im Training sichtbar, zeigt die nächste Taste, umschaltbar', async ({ page }) => {
+  await expect(page.locator('.typewriter')).toBeHidden(); // in Büchern standardmäßig aus
+  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: Training');
+  await page.locator('#trainBtn').click();
+  await expect(page.locator('#bookTitle')).toHaveText('Training');
+  await expect(page.locator('.typewriter')).toBeVisible();
+
+  const text = asTyped(await sectionText(page));
+  const next = async (i: number): Promise<void> => {
+    const ch = text[i]!;
+    const base = ch === ' ' ? ' ' : ch.toLowerCase();
+    await expect(page.locator('.tw-key.next').first()).toHaveAttribute('data-k', base);
+    await expect(page.locator('.tw-finger')).toContainText(ch === ' ' ? 'Leertaste · Daumen' : `${ch} · `);
+  };
+  await next(0);
+  // Großbuchstabe: Taste und Umschalttaste der anderen Hand leuchten
+  if (/\p{Lu}/u.test(text[0]!)) await expect(page.locator('.tw-key.next')).toHaveCount(2);
+  await page.keyboard.type(text.slice(0, 3));
+  await next(3);
+  await page.keyboard.type('#'); // Fehler im strikten Modus: dieselbe Taste bleibt markiert
+  await next(3);
+
+  await page.locator('#kbBtn').click();
+  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: immer');
+  await page.locator('#kbBtn').click();
+  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: aus');
+  await expect(page.locator('.typewriter')).toBeHidden();
+  await expect(page.locator('.tw-key.next')).toHaveCount(0);
+  await page.locator('#kbBtn').click();
+  await expect(page.locator('.typewriter')).toBeVisible();
+  await next(3);
+});
+
 test('Ton an: Schreibmaschine lädt, Anschläge, Fehler und Abschluss ohne Warnungen', async ({ browser }) => {
   const page = await browser.newPage();
   const problems: string[] = [];

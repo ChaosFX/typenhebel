@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { areNeighbors, KEYS, keyOf, neighbors, strokesFor } from '../src/core';
+import { areNeighbors, describeStrokes, fingerLabel, KEYS, keyOf, neighbors, strokesFor } from '../src/core';
 
 const finger = (ch: string): string | null => {
   const k = keyOf(ch);
@@ -70,5 +70,19 @@ describe('keyboard (deutsche ISO-Tastatur, Zehnfingersystem)', () => {
     expect(areNeighbors('χ', 'x')).toBe(false);
     // Nachbarschaft ist symmetrisch
     for (const a of KEYS) for (const b of KEYS) expect(areNeighbors(a.base, b.base)).toBe(areNeighbors(b.base, a.base));
+  });
+});
+
+describe('Beschreibung für die Schreibmaschinen-Tastatur', () => {
+  const d = (ch: string): string => describeStrokes(strokesFor(ch)!);
+  test('Finger, Umschalttaste der anderen Hand, AltGr, Tottasten', () => {
+    expect(fingerLabel(keyOf('f')!)).toBe('linker Zeigefinger');
+    expect(d('a')).toBe('linker kleiner Finger');
+    expect(d(' ')).toBe('Daumen');
+    expect(d('L')).toBe('rechter Ringfinger + Umschalttaste links');
+    expect(d('Q')).toBe('linker kleiner Finger + Umschalttaste rechts');
+    expect(d('@')).toBe('linker kleiner Finger + AltGr');
+    expect(d('é')).toBe('rechter kleiner Finger (Tottaste), dann linker Mittelfinger');
+    expect(d('„')).toBe(d('"'));
   });
 });

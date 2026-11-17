@@ -1,7 +1,7 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
 // Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil); dazu der Umschalter für die Cursorform.
-const ADDITIONS = ['.brand', '#caretBtn'];
+const ADDITIONS = ['.brand', '#caretBtn', '#kbBtn'];
 // Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen; dort ausblenden.
 const MOVED = ['#loadBtn', '#profBtn'];
 import { expect, test, type Page } from '@playwright/test';
