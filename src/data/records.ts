@@ -2,11 +2,14 @@
 // DOM- und IndexedDB-frei, damit alles in Unit-Tests prüfbar ist.
 import {
   addProfiles,
+  digestOf,
   emptyProfile,
+  isDigest,
   isCoverChoice,
   mergeProfile,
   type Book,
   type CoverChoice,
+  type Digest,
   type LogEvent,
   type Profile,
 } from '../core';
@@ -33,6 +36,16 @@ export interface SessionRecord {
   stats: SessionSummary;
   /** Nur für die letzten KEEP_EVENTS Sessions vorhanden */
   events?: LogEvent[];
+  /** Kurzfassung der Rohdaten; bleibt beim Verdichten erhalten (SPEC Phase 6). Fehlt bei Sessions,
+   *  deren Rohdaten schon vor Einführung der Kurzfassung verdichtet waren. */
+  digest?: Digest;
+}
+
+/** Kurzfassung ergänzen, wo Rohdaten vorhanden sind; ungültige Kurzfassungen neu berechnen oder verwerfen. */
+export function withDigest(s: SessionRecord): SessionRecord {
+  if (isDigest(s.digest)) return s;
+  const { digest: _, ...rest } = s;
+  return s.events?.length ? { ...rest, digest: digestOf(s.events) } : rest;
 }
 
 /** Buch ohne Text, für Listen und Menüs. Der Text liegt getrennt (Tabelle `texts`). */
@@ -133,11 +146,11 @@ function checkSession(s: unknown): SessionRecord {
     (s.events !== undefined && !Array.isArray(s.events))
   )
     throw new ImportError('Ein Eintrag im Verlauf ist beschädigt.');
-  return {
+  return withDigest({
     ...(s as unknown as SessionRecord),
     bookTitle: isStr(s.bookTitle) ? s.bookTitle : '',
     strict: s.strict !== false,
-  };
+  });
 }
 
 function checkLegacySession(s: unknown): SessionRecord {

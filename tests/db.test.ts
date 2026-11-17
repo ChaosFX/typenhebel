@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { emptyProfile, mergeProfile, Session, type Book } from '../src/core';
+import { digestOf, emptyProfile, isDigest, mergeProfile, Session, type Book } from '../src/core';
 import {
   addSession,
   buildExport,
@@ -121,6 +122,41 @@ describe('Sessions', () => {
     expect(all[0]!.stats.wpm).toBeGreaterThan(0);
     expect(await compactEvents(db)).toBe(0);
   });
+
+  test('Kurzfassung bleibt beim Verdichten erhalten', async () => {
+    for (let i = 0; i < 31; i++) {
+      const s = session('s' + i, 1000 + i);
+      await addSession(db, { ...s, digest: digestOf(s.events!) }, emptyProfile());
+    }
+    const oldest = (await db.sessions.get('s0'))!;
+    expect(oldest.events).toBeUndefined();
+    expect(isDigest(oldest.digest)).toBe(true);
+    expect(oldest.digest!.profile.n).toBe(3);
+  });
+
+  test('Upgrade auf Schema 2 ergänzt die Kurzfassung, wo Rohdaten vorhanden sind', async () => {
+    const name = 'test-upgrade-' + n++;
+    const v1 = new Dexie(name);
+    v1.version(1).stores({
+      books: 'id, created',
+      texts: 'bookId',
+      sessions: 'id, date, bookId',
+      progress: 'bookId',
+      kv: 'key',
+    });
+    await v1.open();
+    const withEvents = session('a', 1);
+    const { events: _, ...noEvents } = session('b', 2);
+    await v1.table('sessions').bulkPut([withEvents, noEvents]);
+    v1.close();
+
+    const v2 = new TypenhebelDb(name);
+    await v2.open();
+    const a = (await v2.sessions.get('a'))!;
+    expect(a.digest).toEqual(digestOf(withEvents.events!));
+    expect((await v2.sessions.get('b'))!.digest).toBeUndefined();
+    await v2.delete();
+  });
 });
 
 describe('Export und Import', () => {
@@ -128,7 +164,7 @@ describe('Export und Import', () => {
     const s = session('s1', 5);
     const prof = mergeProfile(emptyProfile(), s.events!);
     await saveBook(db, book('b1'));
-    await addSession(db, s, prof);
+    await addSession(db, { ...s, digest: digestOf(s.events!) }, prof);
     await db.progress.put({ bookId: 'b1', section: 1, done: [0] });
     const json = JSON.stringify(await buildExport(db, true));
     expect(JSON.parse(json).books[0].sections).toHaveLength(2);
@@ -143,6 +179,17 @@ describe('Export und Import', () => {
     expect(st.books.map((b) => b.id)).toEqual(['b1']);
     expect(await getSections(other, 'b1')).toHaveLength(2);
     expect(st.progress.get('b1')!.done).toEqual([0]);
+    expect(st.sessions[0]!.digest).toBeUndefined(); // im Speicher schlank, in der Datenbank vorhanden
+    expect((await other.sessions.get('s1'))!.digest).toEqual(digestOf(s.events!));
+
+    // Sicherungen ohne Kurzfassung (vor Phase 6): wird beim Import aus den Rohdaten berechnet
+    const old = JSON.parse(json) as { sessions: SessionRecord[] };
+    for (const x of old.sessions) delete x.digest;
+    const third = new TypenhebelDb('test-old-' + n++);
+    await third.open();
+    await importJson(third, JSON.stringify(old));
+    expect((await third.sessions.get('s1'))!.digest).toEqual(digestOf(s.events!));
+    await third.delete();
 
     // Zweiter Import derselben Datei: nichts doppelt
     const again = await importJson(other, json);

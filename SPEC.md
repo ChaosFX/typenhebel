@@ -105,6 +105,7 @@ interface SessionRecord {
   id: string; date: number; bookId: string; section: number;
   strict: boolean; stats: SessionStats;
   events?: KeyEvent[];            // Rohdaten nur für die letzten N Sessions behalten
+  digest?: Digest;                // Kurzfassung der Rohdaten, bleibt dauerhaft (Phase 6)
 }
 interface Profile {               // laufend aggregiert
   version: 1; sessions: number; keystrokes: number;
@@ -204,6 +205,16 @@ Alle gespeicherten Strukturen tragen eine **Schema-Version**. Migrationen sind P
 - Seite „Datenschutz“: keine Datenübertragung, keine Cookies, nur lokale Speicherung. Prüfen, ob für die öffentliche Seite ein Impressum nötig ist (Dominik klärt das selbst).
 - Lizenz für den Code (Vorschlag: MIT), Lizenzübersicht für Schriften und Texte.
 - Content-Security-Policy per `<meta>`, die externe Requests verbietet.
+
+### Phase 6: Fortschritt und Motivation
+Angeregt von Dominik (2026-11-17): Training optimieren, Fortschritt zeigen, sichtbar machen, welche Bereiche besser geworden sind. Kann vor Phase 4/5 laufen. Grundton wie überall: ruhig, warm, buchartig, also **keine** Punkte, Level oder lauten Effekte, sondern Tagebuch, Meilensteine und belegter Fortschritt.
+- **Kurzfassung je Abschnitt** (Voraussetzung für alles Weitere, zuerst umsetzen): Die Rohdaten entfallen nach 30 Abschnitten, das Profil zählt alles zusammen. Ohne eigene Aufzeichnung lässt sich später nicht sagen, wie eine Taste vor drei Wochen war, und rückwirkend lässt sich das nicht herstellen.
+  - Umgesetzt (2026-11-17): `core/digest.ts`. Jede Session bekommt beim Speichern eine **additive** Kurzfassung (`digest`): Profil nur dieses Abschnitts (Zeichen, Bigramme, Verwechslungen, Zeichenklassen), Dreiergruppen sowie Wortanfänge/-enden als [n, Summe ms], Fehler je Art, Verlangsamung nach Fehlern und Ermüdung als Zähler und Summen. Definitionen wie in Phase 3 (dieselbe Schleife `scanLog` in `core/rhythm.ts`), Zeiten je Intervall auf 1500 ms gekappt und auf ganze ms gerundet. Weil Mediane sich nicht addieren lassen, vergleichen Zeitraum-Auswertungen **Mittelwerte** der gekappten Zeiten. Jeder Zeitraum (Tag, Woche, „vor dem Training“) ergibt sich mit `sumDigests`. Statt einer eigenen Tagestabelle hängt die Kurzfassung an der Session: Export, Import und Entdoppeln laufen damit über die Session-ID wie bisher. Datenbank-Schema 2 ergänzt sie für Sessions, die noch Rohdaten haben; Importe ohne Kurzfassung bekommen sie aus den Rohdaten, ungültige werden neu berechnet oder verworfen. Größe etwa 15 KB je Abschnitt (Rohdaten etwa 100 KB). Die App hält die Kurzfassungen nicht im Speicher, sie liegen nur in IndexedDB. Sessions, deren Rohdaten vorher schon verdichtet waren, haben keine.
+- **Verbesserungen zeigen**: „Seit letzter Woche: ä 18 % schneller, ‚ung‘ von langsam auf normal, linker Ringfinger 40 % weniger Fehler“, je Taste, Finger, Dreiergruppe und Fehlerart, immer mit „n = …“ und nur bei ausreichender Datenbasis in beiden Zeiträumen (Mindeststichproben wie in Phase 3).
+- **Rückmeldung zum Training**: Nach einem Training zeigen, ob sich die geübten Ziele gegenüber vorher bewegt haben. Prüft zugleich, ob das adaptive Training wirkt.
+- **Gemeisterte Ziele**: Ein Ziel, das stabil im normalen Bereich liegt, fällt aus dem Training und erscheint in einer kleinen Liste.
+- **Übungstage**: ruhiger Kalender wie ein Tagebuch, optional Tagesziel (z. B. 15 Minuten); hängt mit dem „Trainingsplan des Tages“ (Phase 3) zusammen.
+- **Bestwerte und Meilensteine**: persönliche Bestwerte je Buch und insgesamt, Meilensteine (erstes Buch durchgetippt, 100.000 Anschläge).
 
 ---
 

@@ -181,6 +181,11 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   expect(data).toMatchObject({ app: 'typenhebel', schema: 2 });
   expect(data.sessions).toHaveLength(1);
   expect(data.sessions[0].events.length).toBeGreaterThan(10);
+  // Kurzfassung (Phase 6) wird beim Abschluss gespeichert und wandert mit
+  expect(data.sessions[0].digest).toMatchObject({ v: 1, profile: { sessions: 1 } });
+  expect(data.sessions[0].digest.profile.n).toBe(
+    data.sessions[0].events.filter((e: { kind: string }) => e.kind === 'k').length,
+  );
   expect(data.books).toHaveLength(1);
 
   const ctx = await browser.newContext();

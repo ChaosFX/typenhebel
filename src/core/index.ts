@@ -72,10 +72,12 @@ export {
   analyzeRhythm,
   dailyTrend,
   rhythmAdvice,
+  scanLog,
   type DayPoint,
   type Rhythm,
   type RhythmOptions,
   type RhythmSession,
+  type RhythmSink,
   type SlowGroup,
 } from './rhythm';
 export {
@@ -90,3 +92,13 @@ export {
   type Target,
   type TrainingSection,
 } from './training';
+export {
+  DIGEST_VERSION,
+  digestOf,
+  emptyDigest,
+  isDigest,
+  sumDigests,
+  type Digest,
+  type Third,
+  type Timing,
+} from './digest';
