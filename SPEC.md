@@ -216,6 +216,7 @@ Angeregt von Dominik (2026-11-17): Training optimieren, Fortschritt zeigen, sich
 - **Rückmeldung zum Training**: Nach einem Training zeigen, ob sich die geübten Ziele gegenüber vorher bewegt haben. Prüft zugleich, ob das adaptive Training wirkt.
 - **Gemeisterte Ziele**: Ein Ziel, das stabil im normalen Bereich liegt, fällt aus dem Training und erscheint in einer kleinen Liste.
 - **Übungstage**: ruhiger Kalender wie ein Tagebuch, optional Tagesziel (z. B. 15 Minuten); hängt mit dem „Trainingsplan des Tages“ (Phase 3) zusammen.
+- **Länge des Trainings wählbar** (Dominik, 2026-11-17, später): derzeit etwa 600 Zeichen (Drill, Sätze, Drill); ein Schalter z. B. kurz/normal/lang, der Anzahl und Länge der Abschnitte steuert.
 - **Bestwerte und Meilensteine**: persönliche Bestwerte je Buch und insgesamt, Meilensteine (erstes Buch durchgetippt, 100.000 Anschläge).
 
 ---
