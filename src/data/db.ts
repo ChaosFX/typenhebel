@@ -1,6 +1,6 @@
 // IndexedDB über Dexie: Schema, Migration aus localStorage, Export/Import.
 import Dexie, { type EntityTable } from 'dexie';
-import { emptyProfile, type Book, type CoverChoice, type Profile, type Section } from '../core';
+import { emptyProfile, type Book, type CoverChoice, type Digest, type Profile, type Section } from '../core';
 import {
   bookMeta,
   cleanCovers,
@@ -142,6 +142,12 @@ export async function loadState(db: TypenhebelDb): Promise<LoadedState> {
     exportedAtSessions: (exported?.value as number | undefined) ?? 0,
     covers: cleanCovers(covers?.value),
   };
+}
+
+/** Kurzfassungen ab einem Zeitpunkt (für Vergleiche über Zeiträume, SPEC Phase 6). */
+export async function loadDigests(db: TypenhebelDb, since: number): Promise<{ date: number; digest?: Digest }[]> {
+  const rows = await db.sessions.where('date').aboveOrEqual(since).toArray();
+  return rows.map(({ date, digest }) => (digest ? { date, digest } : { date }));
 }
 
 export async function getSections(db: TypenhebelDb, bookId: string): Promise<Section[] | null> {
