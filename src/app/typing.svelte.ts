@@ -44,6 +44,8 @@ export class Typing {
     app.snd.unlockOn(document);
     // Die Schrift lädt erst nach dem ersten Zeichnen (font-display: swap); danach stimmen die Positionen nicht mehr.
     document.fonts?.addEventListener('loadingdone', () => this.updateCaret(true));
+    // Textgröße oder Fensterbreite geändert: Zeilen brechen neu um, der Cursor muss mit
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => this.updateCaret(true)).observe(el.text);
     attachInput(el.inp, {
       onChar: (ch, t) => this.onChar(ch, t),
       onBackspace: (t) => this.onBackspace(t),

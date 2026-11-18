@@ -1,9 +1,10 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
-// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil); dazu der Umschalter für die Cursorform.
-const ADDITIONS = ['.brand', '#caretBtn', '#kbBtn'];
-// Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen; dort ausblenden.
-const MOVED = ['#loadBtn', '#profBtn'];
+// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil); dazu der Knopf „Einstellungen“.
+const ADDITIONS = ['.brand', '#setBtn'];
+// Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen, Ton und Farbschema sind ins
+// Einstellungs-Panel gewandert; dort ausblenden.
+const MOVED = ['#loadBtn', '#profBtn', '#soundBtn', '#themeBtn'];
 import { expect, test, type Page } from '@playwright/test';
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -72,8 +73,10 @@ test('Cursor sitzt nach dem Laden der Schrift am Zeichen, als Strich oder Unters
   expect(Math.abs(caret.x - first.x)).toBeLessThan(1.5);
   expect(Math.abs(caret.height - first.height)).toBeLessThan(1);
 
-  await page.locator('#caretBtn').click();
-  await expect(page.locator('#caretBtn')).toHaveText('Cursor: Unterstrich');
+  await page.locator('#setBtn').click();
+  await page.locator('#set-caret').getByRole('radio', { name: 'Unterstrich' }).check();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#setDlg')).toBeHidden();
   await expect(page.locator('html')).toHaveAttribute('data-caret', 'underline');
   await page.waitForTimeout(150); // Übergang der Breite abwarten
   caret = await box('#text .caret');
@@ -83,5 +86,7 @@ test('Cursor sitzt nach dem Laden der Schrift am Zeichen, als Strich oder Unters
 
   // Einstellung bleibt nach dem Neuladen erhalten
   await openApp(page, true);
-  await expect(page.locator('#caretBtn')).toHaveText('Cursor: Unterstrich');
+  await expect(page.locator('html')).toHaveAttribute('data-caret', 'underline');
+  await page.locator('#setBtn').click();
+  await expect(page.locator('#set-caret input[value=underline]')).toBeChecked();
 });
