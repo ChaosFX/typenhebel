@@ -8,6 +8,7 @@
   import FingerStats from './FingerStats.svelte';
   import KeyMap from './KeyMap.svelte';
   import Insights from './Insights.svelte';
+  import Progress from './Progress.svelte';
   import RhythmStats from './RhythmStats.svelte';
   import Modal from './Modal.svelte';
 
@@ -87,6 +88,7 @@
         {`${app.profile.sessions} ${plural(app.profile.sessions)} · ${app.profile.n} Anschläge ausgewertet.`}
       </p>
       <Insights a={analysis} />
+      <Progress />
       {#if fingers}
         <h3 class="deep-h">
           Tasten{#if fingers.n < 3000}{' '}<span class="note">· vorläufig ({fingers.n} Anschläge)</span>{/if}

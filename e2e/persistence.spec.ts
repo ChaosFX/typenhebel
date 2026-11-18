@@ -173,6 +173,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
 
   await page.locator('#profBtn').click();
   await expect(page.locator('#profStore')).toContainText('Seit der letzten Sicherung: 1 Abschnitt.');
+  await expect(page.locator('#profProgress')).toContainText('sobald du in beiden Wochen geübt hast');
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#profExport').click()]);
   const file = await download.path();
   await expect(page.locator('#profMsg')).toHaveText('Sicherung gespeichert.');
@@ -202,6 +203,16 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   await other.locator('#profClose').click();
   await openFromLibrary(other, 'Testbuch');
   await expect(other.locator('#chapSel option').first()).toHaveText('✓ Motto · 1/1');
+
+  // Fortschritt (Phase 6): derselbe Abschnitt noch einmal vor neun Tagen → Vergleich der Wochen erscheint
+  const older = { ...data.sessions[0], id: data.sessions[0].id + '-alt', date: data.sessions[0].date - 9 * 86_400_000 };
+  const file2 = file + '-2.json';
+  fs.writeFileSync(file2, JSON.stringify({ ...data, sessions: [older, ...data.sessions] }));
+  await other.locator('#profBtn').click();
+  await other.locator('#profFile').setInputFiles(file2);
+  await expect(other.locator('#profMsg')).toHaveText('1 Abschnitt übernommen, 1 schon vorhanden.');
+  await expect(other.locator('#profProgress')).toContainText('(1 → 1 Abschnitt)');
+  await expect(other.locator('#profProgress')).toContainText('Noch keine deutliche Veränderung');
   await ctx.close();
 });
 

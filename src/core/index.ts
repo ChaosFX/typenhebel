@@ -104,3 +104,16 @@ export {
   type Third,
   type Timing,
 } from './digest';
+export {
+  changeParts,
+  compareDigests,
+  compareWeeks,
+  describeChange,
+  weekWindows,
+  type Change,
+  type ChangeDim,
+  type ChangeMetric,
+  type Overall,
+  type ProgressOptions,
+  type ProgressReport,
+} from './progress';
