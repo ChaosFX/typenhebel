@@ -51,6 +51,9 @@
     document.documentElement.dataset.caret = app.settings.caret;
   });
   $effect(() => {
+    document.documentElement.toggleAttribute('data-focus', app.settings.focus);
+  });
+  $effect(() => {
     document.documentElement.style.setProperty('--fs-scale', String(TEXT_SCALE[app.settings.textSize]));
   });
 
@@ -75,9 +78,23 @@
     app.saveSettings();
     app.restart();
   }
+  function setFocus(on: boolean): void {
+    app.settings.focus = on;
+    app.setOpen = false;
+    app.saveSettings();
+    app.focusInput();
+  }
   const live = $derived(typing?.live ?? { wpm: '0', acc: '100 %', streak: '0', time: '0:00' });
 </script>
 
+{#if app.settings.focus}
+  <button
+    id="focusExit"
+    class="focus-exit"
+    title="Kopfzeile, Werte und Hinweise wieder zeigen"
+    onclick={() => setFocus(false)}>Fokus beenden</button
+  >
+{/if}
 <div class="app">
   <div class="brand">
     <svg class="mark" viewBox="0 0 48 48" aria-hidden="true">
@@ -158,6 +175,12 @@
           ? 'Strikt: Der Cursor wartet auf das richtige Zeichen.'
           : 'Frei: Fehler bleiben stehen und müssen mit ⌫ korrigiert werden.'}
         onclick={toggleMode}>{app.settings.strict ? 'Modus: Strikt' : 'Modus: Frei'}</button
+      >
+      <button
+        id="focusBtn"
+        title="Alles außer dem Text ausblenden"
+        aria-pressed={app.settings.focus}
+        onclick={() => setFocus(true)}>Fokus</button
       >
       <button
         id="setBtn"
