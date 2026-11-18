@@ -1,19 +1,21 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
   import { chapterOf, chapterRange } from './core';
-  import { app, hasChapters, TRAINING_ID } from './app/state.svelte';
+  import { app, hasChapters, TEXT_SCALE, TRAINING_ID } from './app/state.svelte';
   import { Typing } from './app/typing.svelte';
   import CoverDialog from './components/CoverDialog.svelte';
   import LibraryDialog from './components/LibraryDialog.svelte';
   import LoadDialog from './components/LoadDialog.svelte';
   import ProfileDialog from './components/ProfileDialog.svelte';
   import ResultCard from './components/ResultCard.svelte';
+  import SettingsPanel from './components/SettingsPanel.svelte';
   import Typewriter from './components/Typewriter.svelte';
 
   let textEl: HTMLElement;
   let inp: HTMLTextAreaElement;
   let bar: HTMLElement;
   let streak: HTMLElement;
+  let setBtn = $state<HTMLElement>();
   let kb = $state<HTMLElement>();
   let typing = $state<Typing | null>(null);
 
@@ -48,6 +50,9 @@
   $effect(() => {
     document.documentElement.dataset.caret = app.settings.caret;
   });
+  $effect(() => {
+    document.documentElement.style.setProperty('--fs-scale', String(TEXT_SCALE[app.settings.textSize]));
+  });
 
   // Bis der gespeicherte Stand geladen ist, bleibt die Kopfzeile leer (sonst wirkt die App schon bedienbar).
   const ready = $derived(app.sess !== null);
@@ -69,28 +74,6 @@
     app.settings.strict = !app.settings.strict;
     app.saveSettings();
     app.restart();
-  }
-  function toggleSound(): void {
-    app.settings.sound = !app.settings.sound;
-    app.saveSettings();
-    app.focusInput();
-  }
-  function toggleCaret(): void {
-    app.settings.caret = app.settings.caret === 'bar' ? 'underline' : 'bar';
-    app.saveSettings();
-    app.focusInput();
-  }
-  const KEYBOARD_NEXT = { training: 'always', always: 'off', off: 'training' } as const;
-  const KEYBOARD_LABEL = { training: 'Tastatur: Training', always: 'Tastatur: immer', off: 'Tastatur: aus' };
-  function toggleKeyboard(): void {
-    app.settings.keyboard = KEYBOARD_NEXT[app.settings.keyboard];
-    app.saveSettings();
-    app.focusInput();
-  }
-  function toggleTheme(): void {
-    app.settings.theme = app.settings.theme === 'dark' ? 'light' : 'dark';
-    app.saveSettings();
-    app.focusInput();
   }
   const live = $derived(typing?.live ?? { wpm: '0', acc: '100 %', streak: '0', time: '0:00' });
 </script>
@@ -176,14 +159,14 @@
           : 'Frei: Fehler bleiben stehen und müssen mit ⌫ korrigiert werden.'}
         onclick={toggleMode}>{app.settings.strict ? 'Modus: Strikt' : 'Modus: Frei'}</button
       >
-      <button id="soundBtn" onclick={toggleSound}>{app.settings.sound ? 'Ton: an' : 'Ton: aus'}</button>
-      <button id="caretBtn" title="Form des Cursors umschalten" onclick={toggleCaret}
-        >{app.settings.caret === 'bar' ? 'Cursor: Strich' : 'Cursor: Unterstrich'}</button
+      <button
+        id="setBtn"
+        aria-expanded={app.setOpen}
+        aria-controls="setDlg"
+        bind:this={setBtn}
+        onclick={() => (app.setOpen = !app.setOpen)}>Einstellungen</button
       >
-      <button id="kbBtn" title="Tastatur unter dem Text: nur im Training, immer oder aus" onclick={toggleKeyboard}
-        >{KEYBOARD_LABEL[app.settings.keyboard]}</button
-      >
-      <button id="themeBtn" onclick={toggleTheme}>{app.settings.theme === 'dark' ? 'Hell' : 'Dunkel'}</button>
+      <SettingsPanel anchor={setBtn} />
     </div>
   </header>
 

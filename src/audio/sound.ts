@@ -17,6 +17,12 @@ const ERR_KNOCKS: [number, number, number, number][] = [
   [0.05, 0.78, 2000, 1.4],
 ];
 
+/**
+ * Regler 0–100 → Verstärkung. Quadratisch, weil das Ohr Lautstärke logarithmisch hört;
+ * 70 entspricht etwa der bisherigen Lautstärke (≈ 1), 100 ist doppelt so laut.
+ */
+export const volumeGain = (v: number): number => 2 * (Math.min(100, Math.max(0, v)) / 100) ** 2;
+
 interface Loaded {
   machine: Machine;
   buffer: AudioBuffer;
@@ -29,8 +35,12 @@ export class Sound {
   private machine: Loaded | null = null;
   private last: Partial<Record<SoundKind, number>> = {};
 
+  private master: GainNode | null = null;
+
   constructor(
     private readonly enabled: () => boolean,
+    /** Lautstärke 0–100 */
+    private readonly volume: () => number = () => 70,
     private readonly base = import.meta.env.BASE_URL,
   ) {}
 
@@ -94,7 +104,10 @@ export class Sound {
     comp.attack.value = 0.002;
     comp.release.value = 0.08;
     comp.connect(c.destination);
-    this.out = comp;
+    // Lautstärkeregler vor dem Kompressor
+    this.master = c.createGain();
+    this.master.connect(comp);
+    this.out = this.master;
     return true;
   }
 
@@ -130,6 +143,9 @@ export class Sound {
   play(kind: SoundKind): void {
     if (!this.enabled() || !this.init()) return;
     const c = this.ctx!;
+    const g = volumeGain(this.volume());
+    if (!g) return;
+    this.master!.gain.value = g;
     // Auch „interrupted“ (Safari/iOS) und andere Zustände außer „closed“ fortsetzen.
     if (c.state !== 'running' && c.state !== 'closed') void c.resume().catch(() => {});
     const vary = kind === 'key' || kind === 'space' ? 0.85 + Math.random() * 0.15 : 1;

@@ -37,7 +37,7 @@
   --card: #fffdf8;
   --shadow:
     0 1px 0 rgba(255, 255, 255, 0.7) inset, 0 40px 80px -40px rgba(70, 45, 20, 0.35), 0 2px 6px rgba(70, 45, 20, 0.08);
-  --fs: clamp(1.18rem, 1rem + 0.85vw, 1.6rem);
+  --fs: calc(clamp(1.18rem, 1rem + 0.85vw, 1.6rem) * var(--fs-scale, 1));
   /* Schreibmaschine: Emaille-Gehäuse, cremefarbene Tastenkappen, Chromringe */
   --tw-body: #2e2925;
   --tw-body-hi: #463f38;
@@ -47,6 +47,22 @@
   --tw-chrome-hi: #f2f2ef;
   --tw-chrome-lo: #8d8a84;
   --tw-next: #e0a24f;
+}
+/* Sepia (Phase 4): wärmeres, gelblicheres Papier, etwas weicherer Kontrast als Hell; Text bleibt über WCAG AA */
+[data-theme='sepia'] {
+  --bg: #e4d6b9;
+  --paper: #f1e5c9;
+  --ink: #3a2c1e;
+  --dim: #8a7657;
+  --muted: #6b5940;
+  --accent: #8c3f1f;
+  --glow: rgba(140, 63, 31, 0.35);
+  --bad: #a8321f;
+  --bad-bg: rgba(168, 50, 31, 0.14);
+  --line: rgba(58, 44, 30, 0.15);
+  --card: #f6ecd4;
+  --tw-cap: #efe2c4;
+  --tw-cap-lo: #cfbd98;
 }
 [data-theme='dark'] {
   --bg: #141210;
@@ -134,6 +150,7 @@ button.primary:hover {
 }
 
 .top {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.8rem 1.4rem;
@@ -1336,4 +1353,109 @@ dialog.wide {
 .trend b {
   color: var(--ink);
   font-weight: 600;
+}
+
+/* Einstellungs-Panel (Phase 4): klappt unter der Werkzeugleiste auf, nicht modal */
+dialog.settings {
+  position: absolute;
+  inset: auto 0 auto auto;
+  top: 100%;
+  z-index: 30;
+  margin: 0.4rem 0 0;
+  padding: 0.9rem 1.1rem;
+  width: min(28rem, calc(100vw - 2rem));
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  font-size: 0.85rem;
+}
+.set-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.45rem 0;
+  border: 0;
+  border-bottom: 1px dashed var(--line);
+}
+.set-row:last-child {
+  border-bottom: 0;
+}
+fieldset.set-row legend {
+  float: left;
+  padding: 0;
+}
+.set-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.seg label,
+.switch {
+  position: relative;
+  cursor: pointer;
+}
+.seg input,
+.switch input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.seg span,
+.switch span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+.seg input:checked + span,
+.switch input:checked + span {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.seg input:focus-visible + span,
+.switch input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.set-sound {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.volume {
+  flex: 1;
+  display: flex;
+}
+.volume input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.volume input:disabled {
+  opacity: 0.4;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

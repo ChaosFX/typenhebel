@@ -106,7 +106,15 @@ test('Training: Übungen mit Begründung, nach dem Neuladen wieder das Buch', as
 
 test('Schreibmaschinen-Tastatur: im Training sichtbar, zeigt die nächste Taste, umschaltbar', async ({ page }) => {
   await expect(page.locator('.typewriter')).toBeHidden(); // in Büchern standardmäßig aus
-  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: Training');
+  const kb = async (value: string): Promise<void> => {
+    await page.locator('#setBtn').click();
+    await page.locator(`#set-keyboard input[value=${value}]`).check();
+    await page.locator('#setBtn').click();
+    await expect(page.locator('#setDlg')).toBeHidden();
+  };
+  await page.locator('#setBtn').click();
+  await expect(page.locator('#set-keyboard input[value=training]')).toBeChecked();
+  await page.locator('#setBtn').click();
   await page.locator('#trainBtn').click();
   await expect(page.locator('#bookTitle')).toHaveText('Training');
   await expect(page.locator('.typewriter')).toBeVisible();
@@ -126,13 +134,12 @@ test('Schreibmaschinen-Tastatur: im Training sichtbar, zeigt die nächste Taste,
   await page.keyboard.type('#'); // Fehler im strikten Modus: dieselbe Taste bleibt markiert
   await next(3);
 
-  await page.locator('#kbBtn').click();
-  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: immer');
-  await page.locator('#kbBtn').click();
-  await expect(page.locator('#kbBtn')).toHaveText('Tastatur: aus');
+  await kb('always');
+  await expect(page.locator('.typewriter')).toBeVisible();
+  await kb('off');
   await expect(page.locator('.typewriter')).toBeHidden();
   await expect(page.locator('.tw-key.next')).toHaveCount(0);
-  await page.locator('#kbBtn').click();
+  await kb('training');
   await expect(page.locator('.typewriter')).toBeVisible();
   await next(3);
 });
@@ -153,4 +160,46 @@ test('Ton an: Schreibmaschine lädt, Anschläge, Fehler und Abschluss ohne Warnu
   await page.waitForTimeout(300); // Dekodieren abwarten: ein Fehlschlag würde als Warnung erscheinen
   expect(problems).toEqual([]);
   await page.close();
+});
+
+test('Einstellungen: Farbe, Textgröße und Lautstärke wirken sofort und bleiben gespeichert', async ({ page }) => {
+  const fs = (): Promise<number> => page.locator('#text').evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  const before = await fs();
+  await page.locator('#setBtn').click();
+  await expect(page.locator('#setBtn')).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('#setDlg')).toBeVisible();
+
+  await page.locator('#set-theme').getByRole('radio', { name: 'Sepia' }).check();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia');
+  await page.locator('#set-textSize').getByRole('radio', { name: 'sehr groß' }).check();
+  expect(await fs()).toBeCloseTo(before * 1.32, 0);
+  await expect(page.locator('#setVolume')).toBeDisabled(); // Ton im Test aus
+  await page.locator('#setSound').check();
+  await page.locator('#setVolume').fill('30');
+  await page.locator('#setSound').uncheck();
+  await expect(page.locator('#setVolume')).toBeDisabled();
+
+  // Klick neben das Panel schließt es; danach geht das Tippen weiter
+  await page.locator('#text').click();
+  await expect(page.locator('#setDlg')).toBeHidden();
+  await expect(page.locator('#inp')).toBeFocused();
+  const first = asTyped(await sectionText(page))[0]!;
+  await page.keyboard.type(first);
+  await expect(page.locator('#text .c').first()).toHaveClass(/ok/);
+
+  // Cursor sitzt auch bei großer Schrift am Zeichen (nach dem kurzen Übergang)
+  const second = (await page.locator('#text .c').nth(1).boundingBox())!;
+  await expect
+    .poll(async () => Math.abs((await page.locator('#text .caret').boundingBox())!.x - second.x))
+    .toBeLessThan(1.5);
+
+  await openApp(page, true);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'sepia');
+  expect(await fs()).toBeCloseTo(before * 1.32, 0);
+  await page.locator('#setBtn').click();
+  await expect(page.locator('#setVolume')).toHaveValue('30');
+  await expect(page.locator('#setSound')).not.toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#setDlg')).toBeHidden();
+  await expect(page.locator('#inp')).toBeFocused();
 });

@@ -43,10 +43,20 @@ import { checkCorpusBook, CORPUS_PREFIX, outdatedCorpusBooks, parseCorpusIndex }
 import { migrateLegacyKeys, store } from '../data/store';
 import { DEMO } from '../ui/demo';
 
+export type Theme = 'light' | 'sepia' | 'dark';
+export type TextSize = 'small' | 'normal' | 'large' | 'xlarge';
+/** Faktor auf die Grundgröße des Übungstexts */
+export const TEXT_SCALE: Record<TextSize, number> = { small: 0.88, normal: 1, large: 1.15, xlarge: 1.32 };
+export const DEFAULT_VOLUME = 70;
+
 export interface Settings {
   strict: boolean;
   sound: boolean;
-  theme: 'light' | 'dark';
+  /** Lautstärke 0–100 (70 ≈ Lautstärke der Aufnahmen ohne Regler) */
+  volume: number;
+  theme: Theme;
+  /** Schriftgröße des Übungstexts */
+  textSize: TextSize;
   /** Cursorform: senkrechter Strich oder Unterstrich unter dem nächsten Zeichen */
   caret: 'bar' | 'underline';
   /** Schreibmaschinen-Tastatur unter dem Text: nur im Training, immer oder nie */
@@ -84,7 +94,17 @@ function loadSettings(): Settings {
   return {
     strict: s.strict ?? true,
     sound: s.sound ?? true,
-    theme: s.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    volume:
+      typeof s.volume === 'number' && Number.isFinite(s.volume)
+        ? Math.min(100, Math.max(0, Math.round(s.volume)))
+        : DEFAULT_VOLUME,
+    theme:
+      s.theme === 'light' || s.theme === 'sepia' || s.theme === 'dark'
+        ? s.theme
+        : matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light',
+    textSize: s.textSize && s.textSize in TEXT_SCALE ? s.textSize : 'normal',
     caret: s.caret === 'underline' ? 'underline' : 'bar',
     keyboard: s.keyboard === 'always' || s.keyboard === 'off' ? s.keyboard : 'training',
   };
@@ -121,7 +141,12 @@ class AppState {
 
   /** Eingabefeld; wird von der Oberfläche gesetzt. */
   inp: HTMLTextAreaElement | null = null;
-  readonly snd = new Sound(() => this.settings.sound);
+  readonly snd = new Sound(
+    () => this.settings.sound,
+    () => this.settings.volume,
+  );
+  /** Einstellungs-Panel offen */
+  setOpen = $state(false);
   private saveWarned = false;
   private openSeq = 0;
   /** Gespeicherter Stand geladen, das erste Buch wird geöffnet */
@@ -363,6 +388,7 @@ class AppState {
 
   // ---------- Fokus ----------
   dialogOpen(): boolean {
+    // auch das nicht-modale Einstellungs-Panel: Tasten gehören dann seinen Bedienelementen
     return document.querySelector('dialog[open]') !== null;
   }
 
