@@ -203,3 +203,21 @@ test('Einstellungen: Farbe, Textgröße und Lautstärke wirken sofort und bleibe
   await expect(page.locator('#setDlg')).toBeHidden();
   await expect(page.locator('#inp')).toBeFocused();
 });
+
+test('Fokus-Modus: nur der Text bleibt, Tippen läuft weiter, Zustand wird gespeichert', async ({ page }) => {
+  const chrome = ['.brand', '.top', '.live', '.foot', '.bar'];
+  await page.locator('#focusBtn').click();
+  for (const sel of chrome) await expect(page.locator(sel)).toBeHidden();
+  await expect(page.locator('#text')).toBeVisible();
+  await expect(page.locator('#inp')).toBeFocused();
+  const text = asTyped(await sectionText(page));
+  await page.keyboard.type(text.slice(0, 3));
+  await expect(page.locator('#text .c.ok')).toHaveCount(3);
+
+  await openApp(page, true);
+  await expect(page.locator('.top')).toBeHidden();
+  await page.locator('#focusExit').click();
+  for (const sel of chrome) await expect(page.locator(sel)).toBeVisible();
+  await expect(page.locator('#focusExit')).toHaveCount(0);
+  await expect(page.locator('#inp')).toBeFocused();
+});

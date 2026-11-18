@@ -57,6 +57,8 @@ export interface Settings {
   theme: Theme;
   /** Schriftgröße des Übungstexts */
   textSize: TextSize;
+  /** Fokus-Modus: alles außer dem Text (und ggf. der Tastatur) ausgeblendet */
+  focus: boolean;
   /** Cursorform: senkrechter Strich oder Unterstrich unter dem nächsten Zeichen */
   caret: 'bar' | 'underline';
   /** Schreibmaschinen-Tastatur unter dem Text: nur im Training, immer oder nie */
@@ -105,6 +107,7 @@ function loadSettings(): Settings {
           ? 'dark'
           : 'light',
     textSize: s.textSize && s.textSize in TEXT_SCALE ? s.textSize : 'normal',
+    focus: s.focus === true,
     caret: s.caret === 'underline' ? 'underline' : 'bar',
     keyboard: s.keyboard === 'always' || s.keyboard === 'off' ? s.keyboard : 'training',
   };

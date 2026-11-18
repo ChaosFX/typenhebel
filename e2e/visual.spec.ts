@@ -1,7 +1,7 @@
 // Screenshot-Vergleich mit dem Prototyp (SPEC §7, Phase 0): gleiche Ausgangslage, Pixel-Differenz muss 0 sein.
 // Bewusste Ergänzungen gegenüber dem Prototyp werden vor dem Vergleich ausgeblendet.
-// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil); dazu der Knopf „Einstellungen“.
-const ADDITIONS = ['.brand', '#setBtn'];
+// Die Logo-Zeile enthält auch das Hauptmenü (Bibliothek, Training, Profil); dazu die Knöpfe „Fokus“ und „Einstellungen“.
+const ADDITIONS = ['.brand', '#focusBtn', '#setBtn'];
 // Im Prototyp stehen „Text laden“ und „Profil“ noch bei den Einstellungen, Ton und Farbschema sind ins
 // Einstellungs-Panel gewandert; dort ausblenden.
 const MOVED = ['#loadBtn', '#profBtn', '#soundBtn', '#themeBtn'];
