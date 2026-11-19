@@ -86,8 +86,8 @@ const TRAINING_POOL = 4000;
 /** Hinweis bei Speicherfehlern – nie still Daten verlieren. */
 export function storageWarning(e: unknown): string {
   return isQuotaError(e)
-    ? 'Der Browser-Speicher ist voll. Lösche ein Buch oder sichere deine Daten über „Profil → Exportieren“.'
-    : 'Speichern ist gerade nicht möglich. Sichere deine Daten über „Profil → Exportieren“.';
+    ? 'Der Browser-Speicher ist voll. Lösche ein Buch oder sichere deine Daten über „Profil → Sichern“.'
+    : 'Speichern ist gerade nicht möglich. Sichere deine Daten über „Profil → Sichern“.';
 }
 
 function loadSettings(): Settings {
@@ -112,6 +112,9 @@ function loadSettings(): Settings {
     keyboard: s.keyboard === 'always' || s.keyboard === 'off' ? s.keyboard : 'training',
   };
 }
+
+/** Reiter im Profil-Dialog */
+export type ProfileTab = 'overview' | 'keys' | 'history' | 'backup';
 
 export const hasChapters = (b: Pick<Book, 'chapters'>): boolean => (b.chapters?.length ?? 0) > 1;
 
@@ -139,6 +142,8 @@ class AppState {
   libOpen = $state(false);
   loadOpen = $state(false);
   profOpen = $state(false);
+  /** Zuletzt gewählter Profil-Reiter; bleibt bis zum Neuladen erhalten */
+  profTab = $state<ProfileTab>('overview');
   /** Buch, dessen Cover gerade gewählt wird */
   coverId = $state<string | null>(null);
 

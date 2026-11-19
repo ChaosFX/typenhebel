@@ -3,7 +3,8 @@
   import { hint, type Analysis } from '../core';
   import { f1, showCh } from '../ui/format';
 
-  let { a }: { a: Analysis | null } = $props();
+  /** showTip: im Profil steht der Hinweis schon im Überblick */
+  let { a, showTip = true }: { a: Analysis | null; showTip?: boolean } = $props();
   const cap = $derived(a ? Math.max(0.1, ...a.cats.map((c) => c.rate)) : 0.1);
   const tip = $derived(a ? hint(a) : null);
 </script>
@@ -72,5 +73,5 @@
       {/each}
     </div>
   </div>
-  {#if tip}<div class="tip">{tip}</div>{/if}
+  {#if tip && showTip}<div class="tip">{tip}</div>{/if}
 {/if}
