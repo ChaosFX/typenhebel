@@ -17,14 +17,29 @@ test('Abschnitt komplett tippen führt zum Ergebnis', async ({ page }) => {
   await expect(page.locator('#resultVeil')).toBeHidden();
   await expect(page.locator('#secInfo')).toHaveText(/^Abschnitt 2 \//);
   await page.locator('#profBtn').click();
-  await expect(page.locator('#profBody .small').first()).toHaveText(/^1 Abschnitt · \d+ Anschläge ausgewertet\.$/);
+  await expect(page.locator('#profSummary')).toHaveText(/^1 Abschnitt · \d+ Anschläge ausgewertet\.$/);
+  // Phase 4: Reiter, Überblick zuerst; der Fokus liegt auf dem aktiven Reiter, Pfeiltasten wechseln
+  const tab = (name: string) => page.getByRole('tab', { name });
+  await expect(tab('Überblick')).toBeFocused();
+  await expect(tab('Überblick')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#profStats')).toContainText('WPM netto');
+  await page.keyboard.press('ArrowRight');
+  await expect(tab('Tasten')).toBeFocused();
+  await expect(tab('Tasten')).toHaveAttribute('aria-selected', 'true');
   // Phase 3: Tasten-Wärmebild, Finger, Fehlerarten
   await expect(page.locator('.keymap .key')).toHaveCount(49);
   await expect(page.locator('.finger-table tbody tr').first()).toContainText('Kleiner Finger links');
   await expect(page.locator('.finger-table')).toContainText('Hand rechts');
   await expect(page.locator('.error-kinds')).toContainText('letzte 1 Abschnitt, 0 Fehler');
   await expect(page.locator('.rhythm')).toContainText('Rhythmus · letzte 1 Abschnitt');
-  await expect(page.locator('.rhythm')).toContainText('Der Verlauf erscheint ab dem zweiten Übungstag.');
+  await page.keyboard.press('ArrowRight');
+  await expect(tab('Verlauf')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#profPanel')).toContainText('Der Verlauf erscheint ab dem zweiten Übungstag.');
+  await expect(page.locator('#profHist tbody tr')).toHaveCount(1);
+  // Der gewählte Reiter bleibt beim nächsten Öffnen
+  await page.keyboard.press('Escape');
+  await page.locator('#profBtn').click();
+  await expect(tab('Verlauf')).toBeFocused();
 });
 
 test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {
@@ -96,6 +111,7 @@ test('Training: Übungen mit Begründung, nach dem Neuladen wieder das Buch', as
   await expect(page.locator('#secInfo')).toHaveText(`Abschnitt 2 / ${n}`);
 
   await page.locator('#profBtn').click();
+  await page.getByRole('tab', { name: 'Verlauf' }).click();
   await expect(page.locator('#profHist tbody tr').first()).toContainText('Training · 1');
   await page.locator('#profClose').click();
 

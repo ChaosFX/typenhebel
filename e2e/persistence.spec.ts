@@ -72,7 +72,8 @@ test('Daten aus localStorage werden nach IndexedDB übernommen', async ({ page }
   expect(keys).toEqual(['typenhebel.v1.settings']);
 
   await page.locator('#profBtn').click();
-  await expect(page.locator('#profBody')).toContainText('3 Abschnitte · 500 Anschläge');
+  await expect(page.locator('#profSummary')).toContainText('3 Abschnitte · 500 Anschläge');
+  await page.getByRole('tab', { name: 'Verlauf' }).click();
   await expect(page.locator('#profHist tbody tr')).toHaveCount(3);
   await page.locator('#profClose').click();
 
@@ -172,8 +173,9 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   await page.keyboard.press('Enter');
 
   await page.locator('#profBtn').click();
-  await expect(page.locator('#profStore')).toContainText('Seit der letzten Sicherung: 1 Abschnitt.');
   await expect(page.locator('#profProgress')).toContainText('sobald du in beiden Wochen geübt hast');
+  await page.getByRole('tab', { name: 'Sichern' }).click();
+  await expect(page.locator('#profStore')).toContainText('Seit der letzten Sicherung: 1 Abschnitt.');
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#profExport').click()]);
   const file = await download.path();
   await expect(page.locator('#profMsg')).toHaveText('Sicherung gespeichert.');
@@ -194,12 +196,13 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   await seedSettings(other, { strict: true, sound: false, theme: 'light' });
   await openApp(other);
   await other.locator('#profBtn').click();
+  await other.getByRole('tab', { name: 'Sichern' }).click();
   await other.locator('#profFile').setInputFiles(file);
   await expect(other.locator('#profMsg')).toHaveText('1 Abschnitt übernommen, 1 Buch.');
-  await expect(other.locator('#profBody')).toContainText('1 Abschnitt ·');
+  await expect(other.locator('#profSummary')).toContainText('1 Abschnitt ·');
   await other.locator('#profFile').setInputFiles(file);
   await expect(other.locator('#profMsg')).toHaveText('0 Abschnitte übernommen, 1 schon vorhanden.');
-  await expect(other.locator('#profBody')).toContainText('1 Abschnitt ·');
+  await expect(other.locator('#profSummary')).toContainText('1 Abschnitt ·');
   await other.locator('#profClose').click();
   await openFromLibrary(other, 'Testbuch');
   await expect(other.locator('#chapSel option').first()).toHaveText('✓ Motto · 1/1');
@@ -211,6 +214,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
   await other.locator('#profBtn').click();
   await other.locator('#profFile').setInputFiles(file2);
   await expect(other.locator('#profMsg')).toHaveText('1 Abschnitt übernommen, 1 schon vorhanden.');
+  await other.getByRole('tab', { name: 'Überblick' }).click();
   await expect(other.locator('#profProgress')).toContainText('(1 → 1 Abschnitt)');
   await expect(other.locator('#profProgress')).toContainText('Noch keine deutliche Veränderung');
   await ctx.close();
@@ -219,6 +223,7 @@ test('Export und Import: Rundreise in einen leeren Browser', async ({ page, brow
 test('ungültige Sicherung wird abgewiesen', async ({ page }) => {
   await openApp(page);
   await page.locator('#profBtn').click();
+  await page.getByRole('tab', { name: 'Sichern' }).click();
   await page
     .locator('#profFile')
     .setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"hallo":1}') });

@@ -1,17 +1,14 @@
 <script lang="ts">
-  // Trend über Tage (alle Abschnitte) und Rhythmus aus den Rohdaten der letzten Abschnitte
-  import { analyzeRhythm, dailyTrend, rhythmAdvice, type DayPoint, type SlowGroup } from '../core';
+  // Rhythmus aus den Rohdaten der letzten Abschnitte (der Tagesverlauf steht in TrendStats)
+  import { analyzeRhythm, rhythmAdvice, type SlowGroup } from '../core';
   import type { SessionRecord } from '../data/records';
   import { f1 } from '../ui/format';
 
   let { sessions }: { sessions: readonly SessionRecord[] } = $props();
 
   const r = $derived(analyzeRhythm(sessions));
-  const days = $derived(dailyTrend(sessions));
   const advice = $derived(rhythmAdvice(r));
-  const maxWpm = $derived(Math.max(1, ...days.map((d) => d.wpm)));
   const show = (k: string): string => k.replace(/ /g, '␣');
-  const dayLabel = (d: string): string => `${Number(d.slice(8))}.${Number(d.slice(5, 7))}.`;
   const signed = (ratio: number): string => `${ratio >= 1 ? '+' : ''}${Math.round((ratio - 1) * 100)} %`;
   const postErrorText = $derived(
     r?.postError
@@ -25,9 +22,6 @@
           `${f1(r.fatigue.lastErr * 100)} % statt ${f1(r.fatigue.firstErr * 100)} % Fehler (n = ${r.fatigue.n} Abschnitte)`
       : null,
   );
-  const dayTitle = (d: DayPoint): string =>
-    `${dayLabel(d.day)}: ${Math.round(d.wpm)} WPM, ${f1(d.accuracy * 100)} % Genauigkeit, ` +
-    `${d.sessions} ${d.sessions === 1 ? 'Abschnitt' : 'Abschnitte'}`;
   const lists: [string, (x: NonNullable<typeof r>) => SlowGroup[]][] = [
     ['Langsame Dreiergruppen', (x) => x.trigrams],
     ['Wortanfänge', (x) => x.starts],
@@ -36,23 +30,6 @@
 </script>
 
 <div class="rhythm">
-  <h3 class="deep-h">
-    Verlauf{#if days.length > 1}{' '}<span class="note">· Median WPM, letzte {days.length} Übungstage</span>{/if}
-  </h3>
-  {#if days.length > 1}
-    <div class="trend" role="img" aria-label="Tempo je Übungstag">
-      {#each days as d (d.day)}
-        <div class="day" title={dayTitle(d)}>
-          <b>{Math.round(d.wpm)}</b>
-          <div class="col"><i style:height="{(d.wpm / maxWpm) * 100}%"></i></div>
-          <span>{dayLabel(d.day)}</span>
-        </div>
-      {/each}
-    </div>
-  {:else}
-    <p class="empty">Der Verlauf erscheint ab dem zweiten Übungstag.</p>
-  {/if}
-
   {#if r}
     <h3 class="deep-h">
       Rhythmus <span class="note">· letzte {r.sessions} {r.sessions === 1 ? 'Abschnitt' : 'Abschnitte'}</span>
