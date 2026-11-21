@@ -106,6 +106,20 @@ describe('core', () => {
     expect(s.backspace(time + 10)).toBeNull();
   });
 
+  test('Session strikt: falsches Zeichen bleibt rot, bis es richtig getippt ist', () => {
+    const s = new Core.Session('ab');
+    let time = 0;
+    const k = (c: string) => s.type(c, (time += 120));
+    k('x');
+    expect(s.stateAt(0)).toBe('bad');
+    expect(s.stateAt(1)).toBe('');
+    k('y');
+    expect(s.stateAt(0)).toBe('bad');
+    k('a');
+    expect(s.stateAt(0)).toBe('ok');
+    expect(s.stateAt(1)).toBe('');
+  });
+
   test('Session frei: Fehler bleiben, Backspace, Abschluss nur fehlerfrei', () => {
     const s = new Core.Session('Ab', { strict: false });
     let time = 0;

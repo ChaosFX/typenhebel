@@ -47,10 +47,12 @@ test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {
   const spans = page.locator('#text .c');
   await page.keyboard.type('#');
   await expect(spans.nth(0)).not.toHaveClass(/\bok\b/);
+  await expect(spans.nth(0)).toHaveClass(/\bbad\b/);
   await expect(page.locator('#lAcc')).toHaveText('0 %');
   await page.keyboard.press('Backspace'); // wirkungslos im strikten Modus
   await page.keyboard.type(first);
   await expect(spans.nth(0)).toHaveClass(/\bok\b/);
+  await expect(spans.nth(0)).not.toHaveClass(/\bbad\b/);
   await expect(spans.nth(1)).not.toHaveClass(/\bok\b/);
   await expect(page.locator('#lAcc')).toHaveText('50 %');
 });
