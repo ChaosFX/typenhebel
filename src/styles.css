@@ -259,8 +259,28 @@ button.primary:hover {
   border-radius: 3px;
   box-shadow: inset 0 -2px 0 var(--bad);
 }
+.c.fixed {
+  color: var(--bad);
+  box-shadow: inset 0 -2px 0 var(--bad);
+}
+/* Sichtbare Leerzeichen: leiser Punkt in der Mitte, in der Farbe des Zeichenzustands */
+[data-spaces] .c[data-s] {
+  position: relative;
+}
+[data-spaces] .c[data-s]::after {
+  content: '·';
+  position: absolute;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  opacity: 0.4;
+  pointer-events: none;
+}
 .c.pop {
   animation: pop 0.45s ease-out;
+}
+.c.fixed.pop {
+  animation: none;
 }
 .c.flash {
   animation: flash 0.3s ease-out;

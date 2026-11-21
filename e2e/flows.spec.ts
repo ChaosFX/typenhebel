@@ -51,9 +51,8 @@ test('Strikt: Fehler blockiert den Cursor', async ({ page }) => {
   await expect(page.locator('#lAcc')).toHaveText('0 %');
   await page.keyboard.press('Backspace'); // wirkungslos im strikten Modus
   await page.keyboard.type(first);
-  await expect(spans.nth(0)).toHaveClass(/\bok\b/);
-  await expect(spans.nth(0)).not.toHaveClass(/\bbad\b/);
-  await expect(spans.nth(1)).not.toHaveClass(/\bok\b/);
+  await expect(spans.nth(0)).toHaveClass(/\bfixed\b/); // bleibt nach dem Korrigieren markiert
+  await expect(spans.nth(1)).not.toHaveClass(/\bok\b|\bfixed\b/);
   await expect(page.locator('#lAcc')).toHaveText('50 %');
 });
 
@@ -220,6 +219,22 @@ test('Einstellungen: Farbe, Textgröße und Lautstärke wirken sofort und bleibe
   await page.keyboard.press('Escape');
   await expect(page.locator('#setDlg')).toBeHidden();
   await expect(page.locator('#inp')).toBeFocused();
+});
+
+test('Leerzeichen: als Punkt sichtbar, abschaltbar, bleibt gespeichert', async ({ page }) => {
+  const dot = (): Promise<string> =>
+    page
+      .locator('#text .c[data-s]')
+      .first()
+      .evaluate((el) => getComputedStyle(el, '::after').content);
+  await expect(page.locator('html')).toHaveAttribute('data-spaces', '');
+  expect(await dot()).toBe('"·"');
+  await page.locator('#setBtn').click();
+  await page.locator('#set-spaces').getByRole('radio', { name: 'aus' }).check();
+  await expect(page.locator('html')).not.toHaveAttribute('data-spaces');
+  expect(await dot()).toBe('none');
+  await openApp(page, true);
+  await expect(page.locator('html')).not.toHaveAttribute('data-spaces');
 });
 
 test('Fokus-Modus: nur der Text bleibt, Tippen läuft weiter, Zustand wird gespeichert', async ({ page }) => {
