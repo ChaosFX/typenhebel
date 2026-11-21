@@ -26,11 +26,16 @@
     ['always', 'immer'],
     ['off', 'aus'],
   ];
+  const SPACES: Choice<'spaces'> = [
+    [true, 'zeigen'],
+    [false, 'aus'],
+  ];
   const groups = [
     { key: 'theme', legend: 'Farbe', choices: THEMES },
     { key: 'textSize', legend: 'Textgröße', choices: SIZES },
     { key: 'caret', legend: 'Cursor', choices: CARETS },
     { key: 'keyboard', legend: 'Tastatur', choices: KEYBOARDS },
+    { key: 'spaces', legend: 'Leerzeichen', choices: SPACES },
   ] as const;
 
   function set<K extends keyof Settings>(key: K, value: Settings[K]): void {

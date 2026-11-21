@@ -49,6 +49,7 @@
   });
   $effect(() => {
     document.documentElement.dataset.caret = app.settings.caret;
+    document.documentElement.toggleAttribute('data-spaces', app.settings.spaces);
   });
   $effect(() => {
     document.documentElement.toggleAttribute('data-focus', app.settings.focus);

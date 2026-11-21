@@ -63,6 +63,8 @@ export interface Settings {
   caret: 'bar' | 'underline';
   /** Schreibmaschinen-Tastatur unter dem Text: nur im Training, immer oder nie */
   keyboard: 'training' | 'always' | 'off';
+  /** Leerzeichen als leisen Punkt zeigen */
+  spaces: boolean;
 }
 
 /** Angaben für die Ergebniskarte, festgehalten beim Abschluss eines Abschnitts. */
@@ -110,6 +112,7 @@ function loadSettings(): Settings {
     focus: s.focus === true,
     caret: s.caret === 'underline' ? 'underline' : 'bar',
     keyboard: s.keyboard === 'always' || s.keyboard === 'off' ? s.keyboard : 'training',
+    spaces: s.spaces !== false,
   };
 }
 

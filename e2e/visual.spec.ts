@@ -29,7 +29,8 @@ const FONT_FACES = (readFileSync(resolve('src/styles.css'), 'utf8').match(/@font
   .join('\n');
 
 async function shot(page: Page, url: string, theme: string): Promise<PNG> {
-  await seedSettings(page, { strict: true, sound: false, theme });
+  // Sichtbare Leerzeichen sind eine Ergänzung gegenüber dem Prototyp
+  await seedSettings(page, { strict: true, sound: false, theme, spaces: false });
   await page.goto(url);
   await page.locator('#text .c').first().waitFor();
   await page.locator('#inp').focus();

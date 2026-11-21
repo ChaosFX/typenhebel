@@ -91,6 +91,8 @@ export class Typing {
       const s = document.createElement('span');
       s.className = 'c';
       s.textContent = ch;
+      // Leerzeichen bleibt echtes Leerzeichen (Zeilenumbruch); den Punkt malt das CSS, wenn data-spaces gesetzt ist.
+      if (ch === ' ') s.dataset.s = '';
       this.spans.push(s);
       frag.appendChild(s);
       if (br.has(i)) {

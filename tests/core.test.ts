@@ -106,7 +106,7 @@ describe('core', () => {
     expect(s.backspace(time + 10)).toBeNull();
   });
 
-  test('Session strikt: falsches Zeichen bleibt rot, bis es richtig getippt ist', () => {
+  test('Session strikt: falsch getipptes Zeichen bleibt markiert', () => {
     const s = new Core.Session('ab');
     let time = 0;
     const k = (c: string) => s.type(c, (time += 120));
@@ -116,8 +116,10 @@ describe('core', () => {
     k('y');
     expect(s.stateAt(0)).toBe('bad');
     k('a');
-    expect(s.stateAt(0)).toBe('ok');
+    expect(s.stateAt(0)).toBe('fixed');
     expect(s.stateAt(1)).toBe('');
+    k('b');
+    expect(s.stateAt(1)).toBe('ok');
   });
 
   test('Session frei: Fehler bleiben, Backspace, Abschluss nur fehlerfrei', () => {

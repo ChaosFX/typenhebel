@@ -38,7 +38,8 @@ export interface SessionStats {
   bestStreak: number;
 }
 
-export type CharState = 'ok' | 'bad' | '';
+/** fixed: im strikten Modus erst nach einem Fehler richtig getippt (bleibt markiert) */
+export type CharState = 'ok' | 'fixed' | 'bad' | '';
 
 export class Session {
   readonly chars: string[];
@@ -54,8 +55,8 @@ export class Session {
   streak = 0;
   best = 0;
   done = false;
-  /** Strikt: Der letzte Anschlag am Cursor war falsch; das Zeichen bleibt rot, bis es richtig getippt ist. */
-  missed = false;
+  /** Strikt: Stellen, an denen mindestens einmal falsch getippt wurde; sie bleiben rot markiert. */
+  readonly missed = new Set<number>();
 
   constructor(text: string, { strict = true }: { strict?: boolean } = {}) {
     this.chars = Array.from(text);
@@ -67,7 +68,10 @@ export class Session {
   }
 
   stateAt(i: number): CharState {
-    if (this.strict) return i < this.pos ? 'ok' : i === this.pos && this.missed ? 'bad' : '';
+    if (this.strict) {
+      if (!this.missed.has(i) || i > this.pos) return i < this.pos ? 'ok' : '';
+      return i < this.pos ? 'fixed' : 'bad';
+    }
     const x = this.typed[i];
     return x ? (x.ok ? 'ok' : 'bad') : '';
   }
@@ -97,8 +101,8 @@ export class Session {
       this.best = Math.max(this.best, this.streak);
     } else this.streak = 0;
     if (this.strict) {
-      if (ok) this.pos++;
-      this.missed = !ok;
+      if (!ok) this.missed.add(i);
+      else this.pos++;
     } else this.typed.push({ got, ok });
     this.done = this.strict
       ? this.pos >= this.chars.length
