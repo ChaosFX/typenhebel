@@ -36,7 +36,7 @@ Dieses Dokument ist die Arbeitsgrundlage für Claude Code. Der funktionierende P
 ### Bewusst getroffene Entscheidungen, nicht ohne Rücksprache ändern
 - **Metriken** (siehe Abschnitt 5): WPM = 5 Zeichen, Leerlauf-Kappung 3 s, Gleichmäßigkeit nach Kogasa-Formel.
 - **Typografie-Äquivalenz**: Angezeigt wird das Original (`„ “ » « ‚ ‘ ’ – —`), akzeptiert werden zusätzlich `"`, `'` und `-`. `…` wird zu `...` normalisiert, `ſ` zu `s`.
-- **Zwei Modi**: *Strikt* (Cursor wartet, Rücktaste deaktiviert) und *Frei* (Fehler bleiben stehen, Korrektur per Rücktaste, Abschluss nur fehlerfrei).
+- **Zwei Modi**: *Strikt* (Cursor wartet, Rücktaste deaktiviert, das falsch getippte Zeichen bleibt rot, bis es richtig kommt) und *Frei* (Fehler bleiben stehen, Korrektur per Rücktaste, Abschluss nur fehlerfrei).
 - **Texte werden als NFC normalisiert**, damit `ä` immer ein Zeichen ist.
 
 ---

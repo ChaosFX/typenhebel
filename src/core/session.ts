@@ -54,6 +54,8 @@ export class Session {
   streak = 0;
   best = 0;
   done = false;
+  /** Strikt: Der letzte Anschlag am Cursor war falsch; das Zeichen bleibt rot, bis es richtig getippt ist. */
+  missed = false;
 
   constructor(text: string, { strict = true }: { strict?: boolean } = {}) {
     this.chars = Array.from(text);
@@ -65,7 +67,7 @@ export class Session {
   }
 
   stateAt(i: number): CharState {
-    if (this.strict) return i < this.pos ? 'ok' : '';
+    if (this.strict) return i < this.pos ? 'ok' : i === this.pos && this.missed ? 'bad' : '';
     const x = this.typed[i];
     return x ? (x.ok ? 'ok' : 'bad') : '';
   }
@@ -96,6 +98,7 @@ export class Session {
     } else this.streak = 0;
     if (this.strict) {
       if (ok) this.pos++;
+      this.missed = !ok;
     } else this.typed.push({ got, ok });
     this.done = this.strict
       ? this.pos >= this.chars.length
