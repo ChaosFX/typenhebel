@@ -6,7 +6,7 @@ Deutschsprachiger Tipptrainer: gemeinfreie Literatur abtippen, Tippverhalten aus
 npm install
 npm run dev        # Entwicklungsserver
 npm test           # Unit-Tests (Vitest)
-npm run e2e        # E2E- und Screenshot-Tests (Playwright)
+npm run e2e        # E2E-Tests (Playwright)
 npm run build      # Produktionsbuild nach dist/
 ```
 
