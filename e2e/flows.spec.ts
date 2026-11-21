@@ -226,9 +226,9 @@ test('Leerzeichen: als Punkt sichtbar, abschaltbar, bleibt gespeichert', async (
     page
       .locator('#text .c[data-s]')
       .first()
-      .evaluate((el) => getComputedStyle(el, '::after').content);
+      .evaluate((el) => getComputedStyle(el).backgroundImage);
   await expect(page.locator('html')).toHaveAttribute('data-spaces', '');
-  expect(await dot()).toBe('"·"');
+  expect(await dot()).toContain('radial-gradient');
   await page.locator('#setBtn').click();
   await page.locator('#set-spaces').getByRole('radio', { name: 'aus' }).check();
   await expect(page.locator('html')).not.toHaveAttribute('data-spaces');
